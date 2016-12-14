@@ -124,9 +124,6 @@ pro sfng_convolve_to_res, idl_in=idl_in, hdr_in=hdr_in $
      message,'Problem with data/output directory?',/info
      goto, the_end
   end
-  
-  use_galaxy=strupcase(use_galaxy)
-  use_galaxy_lowcase=strlowcase(use_galaxy)
 
 ; ==============================
 ; READ DATA AND EXTRACT HEADER INFORMATION
@@ -153,7 +150,7 @@ pro sfng_convolve_to_res, idl_in=idl_in, hdr_in=hdr_in $
   use_bpa=sxpar(hdr,'BPA',count=bpa_ct)
 
   if bmaj_ct eq 0 then begin
-     print,'Cube is missing BMAJ information. I need this for correct convolution. Exiting'
+     message,'Cube is missing BMAJ information. I need this for correct convolution. Exiting',/info
      goto, the_end
   end
   if bmaj_ct eq 1 and bmin_ct eq 0 then begin
@@ -168,7 +165,7 @@ pro sfng_convolve_to_res, idl_in=idl_in, hdr_in=hdr_in $
   end
 
 ; don't attempt to convolve to resolutions smaller than the resolution of the input data
-  use_res_lim=use_bmaj
+  use_res_lim=use_bmaj*3600. 
 
   if use_verbose eq 1 then begin
      print,'===================================================================='
@@ -200,11 +197,15 @@ pro sfng_convolve_to_res, idl_in=idl_in, hdr_in=hdr_in $
      goto, the_end
   end
 
-  gstr=gal_data(use_galaxy)
-  use_distance=gstr.dist_mpc*1.e6    ; distance in parsecs
-
+  if keyword_set(use_galaxy) then begin
+     use_galaxy=strupcase(use_galaxy)
+     use_galaxy_lowcase=strlowcase(use_galaxy)
+     gstr=gal_data(use_galaxy)
+     use_distance=gstr.dist_mpc*1.e6 ; distance in parsecs
+  end
+  
   if keyword_set(distance) then begin
-     use_distance = distance
+     use_distance = distance*1.e6
      if use_verbose eq 1 then begin
         print,'===================================================================='
         print,'Using user-supplied distance [Mpc]: ',use_distance/1.e6
@@ -222,8 +223,11 @@ pro sfng_convolve_to_res, idl_in=idl_in, hdr_in=hdr_in $
 
   use_target_res_as=use_target_res*206265./use_distance
      
-  if keyword_set(arcsecond) then $
+  if keyword_set(arcsecond) then begin
      use_target_res_as=use_target_res
+     use_target_res=use_target_res_as*use_distance/206265.
+  end
+
 
   target_beams=use_target_res_as
   target_scales=use_target_res
@@ -236,7 +240,7 @@ pro sfng_convolve_to_res, idl_in=idl_in, hdr_in=hdr_in $
 
      if use_verbose eq 1 then begin
         print,'===================================================================='
-        print,'Creating maps for '+use_galaxy+' at these scales: '+strjoin(strtrim(string(fix(target_scales)),2),' ')+' pc'
+        print,'Creating output maps at these scales: '+strjoin(strtrim(string(target_scales),2),' ')+' pc'
         wait,use_wait
         print,'===================================================================='
      end
