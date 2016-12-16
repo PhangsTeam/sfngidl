@@ -33,7 +33,11 @@ pro sfng_cube_compare
 ;     Goddard Astron library (not provided)
 ;     AKL CPROPTOO library (not provided)
 ;     AKL GAL_BASE library (not provided)
-;     JPB's enlarge.pro, read_xcat.pro, write_xcat.pro (provided in aux_pro/ subdirectory)
+;     JPBlib: (provided in aux_pro/ subdirectory)
+;             enlarge.pro, read_xcat.pro, write_xcat.pro,
+;             linear_mpfit.pro, linear4mpfit.pro 
+;
+;  
 ; COMMONS:
 ;     
 ; SIDE EFFECTS:
