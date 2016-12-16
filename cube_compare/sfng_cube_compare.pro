@@ -1,4 +1,58 @@
-pro cube_compare
+pro sfng_cube_compare
+
+;+ NAME:
+;     sfng_cube_compare
+; CALLING SEQUENCE:
+;     sfng_cube_compare,
+; PURPOSE:
+;     compares two cubes. Essentially a wrapper to many
+; INPUTS:
+;     fits_in = filename of input cube
+;     idl_in = input cube 
+;     hdr_in = FITS header of input cube
+;     idl_out = modified cube
+;     hdr_out = modified FITS header
+;     idl_mask = output masking cube
+;     hdr_mask =  FITS header of output masking cube
+;     fits_out = filename of output cube
+;     fits_mask = filename of output mask
+; OPTIONAL INPUT:
+;     datadir = directory for input FITS files. Defaults to
+;              current directory.
+;     outdir = output directory for matched FITS files. Defaults to
+;              current directory.
+; ACCEPTED KEY-WORDS:
+;     help = print this help
+;     verbose = print extra information to screen
+; EXAMPLES
+;     sfng_cube_compare,
+;
+; OUTPUTS:
+;     None
+; PROCEDURE AND SUBROUTINE USED
+;     Goddard Astron library (not provided)
+;     AKL CPROPTOO library (not provided)
+;     AKL GAL_BASE library (not provided)
+;     JPBlib: (provided in aux_pro/ subdirectory)
+;             enlarge.pro, read_xcat.pro, write_xcat.pro,
+;             linear_mpfit.pro, linear4mpfit.pro 
+;
+;  
+; COMMONS:
+;     
+; SIDE EFFECTS:
+;     
+; MODIFICATION HISTORY:
+;    written 6-12-2016 by AH
+; COMMENTS AND TO DO LIST:
+;    Minimally tested!
+;    Error trapping not implemented.
+;-
+
+  IF keyword_set(help) THEN BEGIN
+     doc_library,'sfng_cube_compare'
+     goto,the_end
+  ENDIF
 
 ;===================
 ; defaults
@@ -199,9 +253,9 @@ if do_match eq 1 then begin
    match_pixdim=size(c1,/dim)
    nx=match_pixdim[0] & ny=match_pixdim[1] & nchans=match_pixdim[2]
    
-   ccmp_str.pixscale_as=match_cdelt1*3600.
-   ccmp_str.chanw_kms=match_cdelt3
-   ccmp_str.angres_as=match_bmaj
+   ccmp_str.pixscale_as=abs(match_cdelt1)*3600.
+   ccmp_str.chanw_kms=abs(match_cdelt3)
+   ccmp_str.angres_as=match_bmaj*3600.
    ccmp_str.dims=match_pixdim
 
 end
@@ -299,7 +353,7 @@ if do_rebase2 eq 1 then begin
    c2=c2_rebase & c2hdr=c2_rebase_hdr 
 
    ccmp_str.c2_rebase_flag=do_rebase2
-   ccmp_str.c1_rebase_order=use_baseline_order[1]
+   ccmp_str.c2_rebase_order=use_baseline_order[1]
 
 end
 
@@ -530,6 +584,8 @@ end
   c2_chanflux=fltarr(nchans)
   c1_chanflux_jsm=fltarr(nchans)
   c2_chanflux_jsm=fltarr(nchans)
+  c1_chanflux_nosm=fltarr(nchans)
+  c2_chanflux_nosm=fltarr(nchans)
   diff_chanflux=fltarr(nchans)
   diff_chanflux_jsm=fltarr(nchans)
   diff_chanflux_nosm=fltarr(nchans)
@@ -559,6 +615,8 @@ end
      c2_chanflux[i]=total(c2_thisplane,/nan)
      if c1ct gt 0 then c1_chanflux_jsm[i]=total(c1_thisplane[c1_thisplane_jsm_idx],/nan)
      if c2ct gt 0 then c1_chanflux_jsm[i]=total(c2_thisplane[c2_thisplane_jsm_idx],/nan)
+     if nc1ct gt 0 then c1_chanflux_nosm[i]=total(c1_thisplane[c1_thisplane_nosm_idx],/nan)
+     if nc2ct gt 0 then c1_chanflux_nosm[i]=total(c2_thisplane[c2_thisplane_nosm_idx],/nan)
 
      diff_chanflux[i]=c1_chanflux[i]-c2_chanflux[i]
      if c1ct gt 0 and c2ct gt 0 then diff_chanflux_jsm[i]=c1_chanflux_jsm[i]-c2_chanflux_jsm[i]
@@ -588,11 +646,49 @@ end
   ccmp_str.c2_noisestats=sfng_get_basic_stats(c2[c2nosigidx])
   ccmp_str.diffcube_stats=sfng_get_basic_stats(diffcube)
 
-  stop
-  ccmp_str.lincorr_c1c2=0.
-  ccmp_str.lincorr_c2c1=0.
-  ccmp_str.logcorr_c1c2=0.
-  ccmp_str.logcorr_c2c1=0.
+;======================
+; generate 'spectra' -- flux/rms per chan figures
+;======================
+
+  
+
+;======================
+; CORRELATION METRICS
+;======================
+
+  ; linear correlation between pixel values in C1 and C2
+  startguess=[1.0,1.0]
+
+  fitidx=where(finite(c1) eq 1 and finite(c2) eq 1 and joint_sigmask eq 1 and $
+                  finite(c1noise) eq 1 and finite(c2noise) eq 1,fitct)
+
+  res_linc1c2=linear_mpfit(c1[fitidx],c2[fitidx],c1noise[fitidx],c2noise[fitidx] $
+                           ,startguess,/quiet)
+  
+  res_linc2c1=linear_mpfit(c2[fitidx],c1[fitidx],c2noise[fitidx],c1noise[fitidx] $
+                           ,startguess,/quiet)
+
+  fitidx_noneg=where(finite(c1) eq 1 and finite(c2) eq 1 and joint_sigmask eq 1 and $
+                     finite(c1noise) eq 1 and finite(c2noise) eq 1 and $
+                     c1 gt 0 and c2 gt 0, fitct_noneg)
+
+  res_logc1c2=linear_mpfit(alog10(c1[fitidx_noneg]),alog10(c2[fitidx_noneg]),c1noise[fitidx_noneg],c2noise[fitidx_noneg] $
+                           ,startguess,/quiet)
+  
+  res_logc2c1=linear_mpfit(alog10(c2[fitidx_noneg]),alog10(c1[fitidx_noneg]),c2noise[fitidx_noneg],c1noise[fitidx_noneg] $
+                           ,startguess,/quiet)
+
+  ccmp_str.rpx_c1c2=correlate(c1[fitidx],c2[fitidx])
+  ccmp_str.rank_c1c2=r_correlate(c1[fitidx],c2[fitidx])
+
+  ccmp_str.lincorr_c1c2=res_linc1c2
+  ccmp_str.lincorr_c2c1=res_linc2c1
+  ccmp_str.logcorr_c1c2=res_logc1c2
+  ccmp_str.logcorr_c2c1=res_logc2c1
+
+;======================
+; generate correlation plots
+;======================
 
   stop
   
