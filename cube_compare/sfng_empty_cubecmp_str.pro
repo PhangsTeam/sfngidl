@@ -65,10 +65,11 @@ function sfng_empty_cubecmp_str
               c2_noisestats_nosignal: stats_struct , $
               diffcube_stats: stats_struct , $
               diffcube_stats_nosignal: stats_struct , $
-              lincorr_c1c2: nan , $
-              lincorr_c2c1: nan , $
-              logcorr_c1c2: nan , $
-              logcorr_c2c1: nan $
+              rpx_c1c2: nan , $
+              lincorr_c1c2: fltarr(2) , $
+              lincorr_c2c1: fltarr(2) , $
+              logcorr_c1c2: fltarr(2) , $
+              logcorr_c2c1: fltarr(2) $
              }
 
   return,ccmp_str
