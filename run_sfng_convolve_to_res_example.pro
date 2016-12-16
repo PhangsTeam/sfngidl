@@ -1,6 +1,6 @@
 pro run_sfng_convolve_to_res_example
 
-  goto, eg2
+  goto, eg4
 
   eg1:
   cube=readfits('test_data/NGC5068_co21_cube.fits',h)
@@ -34,5 +34,17 @@ pro run_sfng_convolve_to_res_example
                        ,/verbose,/arcsecond,/strict
 
   stop
-  
+
+
+  eg4:
+  ; should fail because convolving beams are both too small
+  sfng_convolve_to_res,fits_in='NGC5068_co21_cube_mom0.fits' $
+                       ,distance=7. $
+                       ,datadir='test_data/' $
+                       ,outdir='test_data' $
+                       ,target_res=[1.,2.] $
+                       ,/verbose
+
+  stop
+
 end

@@ -50,8 +50,11 @@ pro sfng_convolve_to_res, idl_in=idl_in, hdr_in=hdr_in $
 ;     perbeam = flag whether flux units are per-beam (passed to conv_with_gauss for
 ;               correct scaling of map intensity)
 ; EXAMPLES
-;     sfng_convolve_to_res,idl_in=cube,hdr_in=hdr,galaxy='NGC4321'
-;                   target_res=[0.2,0.5,0.8]*1.e3,/round,datadir='./inputdata/',outdir='./files_out/'
+;     sfng_convolve_to_res,idl_in=cube,hdr_in=hdr,galaxy='NGC4321', $
+;                   target_res=[0.2,0.5,0.8]*1.e3,datadir='./inputdata/',outdir='./files_out/'
+;
+;     sfng_convolve_to_res,fits_in='mygalaxy.fits',distance=5., $
+;                   target_res=[10,20,50],/arcsecond,datadir='./inputdata/',outdir='./files_out/',/strict
 ;
 ; OUTPUTS:
 ;     None
