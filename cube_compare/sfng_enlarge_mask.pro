@@ -191,8 +191,8 @@ pro sfng_enlarge_mask,datadir=datadir,fits_in=fits_in $
   
   idl_out=data_out
   hdr_out=hdr_out
-  idl_outmask=mask_final
-  hdr_outmask=hdr_mask
+  idl_mask=mask_final
+  hdr_mask=hdr_mask
         
   the_end:
     return

@@ -1,12 +1,12 @@
 function sfng_get_basic_stats,data,la_flag=la_flag,robust=robust,dim=dim
 
-  s=sfng_empty_basic_stats_struct()
+  s=sfng_empty_stats_str()
 
   if not keyword_set(la_flag) then begin
      s.min=min(data,/nan)
      s.max=max(data,/nan)
      s.mean=avg(data,/nan)
-     s.median=median(data)
+     s.median=median(data) ; by default, IDL median treats NaNs as missing data
      s.rms=stddev(data,/nan)
      s.sum=total(data,/nan)
      if keyword_set(robust) then s.rms=robust_sigma(data)
