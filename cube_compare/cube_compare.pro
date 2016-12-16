@@ -489,8 +489,8 @@ end
    fovidx=where(common_fov_mask eq 1, fovct)  
    c1sigidx=where(c1sigmask eq 1, c1ct, comp=c1nosigidx)
    c2sigidx=where(c2sigmask eq 1, c2ct, comp=c2nosigidx)
-   jsigidx=where(joint_signalmask eq 1, jct)
-   nosigidx=where(no_signalmask eq 1, nsct)
+   jsigidx=where(joint_sigmask eq 1, jct)
+   nosigidx=where(no_sigmask eq 1, nsct)
 
    ccmp_str.npix_cmp_fov=fovct
   ccmp_str.c1_npix_signalmask=c1ct
@@ -544,8 +544,8 @@ end
      c1_noise_thisplane=c1noise[*,*,i]
      c2_thisplane=c2[*,*,i]
      c2_noise_thisplane=c2noise[*,*,i]
-     jsm_thisplane=jointsignalmask[*,*,i]
-     nosm_thisplane=nosignalmask[*,*,i]
+     jsm_thisplane=joint_sigmask[*,*,i]
+     nosm_thisplane=no_sigmask[*,*,i]
      fov_thisplane=common_fov_mask[*,*,i]
      
      c1_thisplane_fov_idx=where(fov_thisplane eq 1 and finite(c1_thisplane) eq 1,fc1ct)
