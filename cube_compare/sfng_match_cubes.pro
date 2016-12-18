@@ -125,12 +125,12 @@ pro sfng_match_cubes,datadir=datadir,fits_in1=fits_in1,fits_in2=fits_in2 $
 ; extract header information that we need for convolution
 ;==============
   
-  bmaj1=sxpar(h1,'BMAJ',count=bmaj1_ct)
-  bmin1=sxpar(h1,'BMIN',count=bmin1_ct)
+  bmaj1=sxpar(h1,'BMAJ',count=bmaj1_ct)*3600.
+  bmin1=sxpar(h1,'BMIN',count=bmin1_ct)*3600.
   bpa1=sxpar(h1,'BPA',count=bpa1_ct)
   
-  bmaj2=sxpar(h2,'BMAJ',count=bmaj2_ct)
-  bmin2=sxpar(h2,'BMIN',count=bmin2_ct)
+  bmaj2=sxpar(h2,'BMAJ',count=bmaj2_ct)*3600.
+  bmin2=sxpar(h2,'BMIN',count=bmin2_ct)*3600.
   bpa2=sxpar(h2,'BPA',count=bpa2_ct)
 
   if not keyword_set(no_convol) then begin
@@ -145,12 +145,12 @@ pro sfng_match_cubes,datadir=datadir,fits_in1=fits_in1,fits_in2=fits_in2 $
      end
     if bmaj1_ct eq 1 and bmin1_ct eq 0 then begin
        print,'Cube 1 missing BMIN information. Setting bmin=bmaj'
-       bmin1=bmaj1
+       bmin1=bmaj1/3600.
        sxaddpar,h1,'BMIN',bmin1,'Assuming BMIN=BMAJ'
     end
     if bmaj2_ct eq 1 and bmin2_ct eq 0 then begin
        print,'Cube 2 missing BMIN information. Setting bmin=bmaj'
-       bmin2=bmaj2
+       bmin2=bmaj2/3600.
        sxaddpar,h2,'BMIN',bmin2,'Assuming BMIN=BMAJ'
     end
     if bpa1_ct eq 0 then begin
@@ -185,6 +185,8 @@ pro sfng_match_cubes,datadir=datadir,fits_in1=fits_in1,fits_in2=fits_in2 $
     
     use_bmaj = (bmaj1 > bmaj2)
     use_bmin = (bmin1 > bmin2)
+    if bmaj1 ge bmaj2 then use_bpa = bpa1
+    if bmaj1 lt bmaj2 then use_bpa = bpa2
 
 ; override if target_beam keyword set
 
@@ -206,9 +208,9 @@ pro sfng_match_cubes,datadir=datadir,fits_in1=fits_in1,fits_in2=fits_in2 $
      
      if (use_round) eq 1 then begin
         use_bmin=use_bmaj
-        bpa=0.
+        use_bpa=0.
      end
-     
+
      if (use_bmaj gt bmaj1) or (use_bmin gt bmin1) then begin
         if keyword_set(verbose) then print,'Convolving Image 1 to: ',use_bmaj,use_bmin
         conv_with_gauss $
@@ -220,7 +222,7 @@ pro sfng_match_cubes,datadir=datadir,fits_in1=fits_in1,fits_in2=fits_in2 $
            ,perbeam=use_perbeam
         d1=d1cvl & h1=h1cvl
      end
-     
+
      if (use_bmaj gt bmaj2) or (use_bmin gt bmin2) then begin
         if keyword_set(verbose) then print,'Convolving Image 2 to: ',bmaj,bmin
         conv_with_gauss $
