@@ -1,5 +1,22 @@
 Analysis and plotting code for piechart paper.
-Feel free to use code in this subdirectory if it's useful, but this part of the repository is mainly intended for Eva & Annie to share code.
+Feel free to use code in this subdirectory if it's useful to you , but this part of the repository is mainly intended for Eva & Annie to share code.
+
+-----
+
+I have the following subdirectory structure (can be modified using keywords in the IDL routines)
+
+code -- contains the IDL .pro and key files. See below. This is the only directory I've put on github.
+co_v0p2 -- linked to SFNG Drive directory with Adam/Andreas's delivered CO data
+ha_v0p1 -- linked to SFNG Drive directory with Brent's maps
+orig_data -- where I put other 'input data' not provided by Adam&Andreas or Brent, e.g. PAWS maps
+savefiles -- where I save the IDL measurement files
+good_data -- where I put the CO/Halpha maps after preparing them for analysis  
+masks -- where I keep a copy of the final blanking mask that I used	
+plots (and further subdirectories) -- where I save the figures that are generated
+
+------
+
+In subdirectory code/
 
 master_sfco.pro -- wrapper that runs the code. use this to run the routines that do differents stages of the analysis
 
