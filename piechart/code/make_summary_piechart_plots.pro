@@ -7,13 +7,16 @@ pro make_summary_piechart_plots, show=show,nostop=nostop
   ; METHOD 2
   restore,'../savefiles/sfng_allgals_BGmaps_80thresh_pieonly.sav'
   use_plot_dir='../plots/thresh80/'
+  ; METHOD 2
+;  restore,'../savefiles/sfng_allgals_BGmaps_80thresh_pieonly.sav'
+;  use_plot_dir='../plots/thresh80/'
 
     ; METHOD 3
  ; restore,'../savefiles/sfng_allgals_BGmaps_blobthresh_pieonly.sav'
 ;  use_plot_dir='../plots/blobthresh/'
 
 
-  sortbymass=0 & sortbysfr=0 & sortbyssfr=0 & sortbyt=0 & sortbyr25=0 & sortbyinc=0 
+  sortbymass=1 & sortbysfr=0 & sortbyssfr=0 & sortbyt=0 & sortbyr25=0 & sortbyinc=0 
   
   win=0L
   loadct,39 
@@ -36,7 +39,7 @@ pro make_summary_piechart_plots, show=show,nostop=nostop
  
   plot,sfco_str[xx].res_pc,sfco_str[xx].ofrac_byflux,/nodata,/xst,/yst $
        ,charsize=2.2,charthick=2,color=fgcolor $
-       ,xtit='Linear Resolution [pc]',ytit='% pixels with overlapping CO and Halpha', yr=[0.0,0.7],xr=[0,1800.]
+       ,xtit='Linear Resolution [pc]',ytit='% pixels with overlapping CO and Halpha', yr=[0.0,0.9],xr=[0,1800.]
   oplot,sfco_str[xx].res_pc,sfco_str[xx].ofrac_byflux,color=fsc_color('Royal Blue'),thick=4
   PLOTSYM, 0 ,1.9, /FILL        ;Plotting symbol is a filled circle,
   oplot,sfco_str[xx].res_pc,sfco_str[xx].ofrac_byflux,color=fgcolor,psym=8
@@ -55,7 +58,7 @@ pro make_summary_piechart_plots, show=show,nostop=nostop
    PLOTSYM, 0 ,2., /FILL          ;Plotting symbol is a filled circle,
    al_legend, /top, /left, box=1, clear=0 $
              , background_color=cgcolor('light gray') $
-             , [use_galname,'Halpha','Halpha-HII'] $
+             , [use_galname,'Halpha','Filtered Halpha'] $
              , lines=[-99,0,0] $
              , thick=4 $
              , psym=8 $
@@ -63,8 +66,10 @@ pro make_summary_piechart_plots, show=show,nostop=nostop
              , color=[255,fsc_color('Royal Blue'),fsc_color('Firebrick')]$
               , charsize=2., charthick=2
 
+
    WRITE_PNG, pngfile, TVRD(/TRUE)
 
+   stop
 
 hasfr_ofrac:
    
@@ -85,10 +90,7 @@ hasfr_ofrac:
   ngals=n_elements(galidx)
   do_gals=sfco_str[xx[galidx]].gal
 
-  stop
-  
   if sortbymass eq 1 then galsort=sfco_str[xx[galidx]].gal_stellarmass
-  if sortbycovfrac eq 1 then galsort=sfco_str[yy[galidx]].co_or_sfr_byflux
   if sortbysfr eq 1 then galsort=sfco_str[xx[galidx]].gal_sfr
   if sortbyssfr eq 1 then galsort=sfco_str[xx[galidx]].gal_logssfr
   if sortbyt eq 1 then galsort=sfco_str[xx[galidx]].gal_ttype
@@ -121,6 +123,10 @@ hasfr_ofrac:
              , textcolor=fgcolor $
              , color=fix(cols) $
              , charsize=1.6, charthick=2.
+
+ al_legend, /top, /right, box=0, clear=0 $
+            , ['Total Halpha'] $
+            , charsize=1.6, charthick=2.
 
    WRITE_PNG, pngfile, TVRD(/TRUE)
 
@@ -175,6 +181,10 @@ hasfr_ofrac:
              , textcolor=fgcolor $
              , color=fix(cols) $
              , charsize=1.6, charthick=2.
+
+  al_legend, /top, /right, box=0, clear=0 $
+            , ['Total Halpha'] $
+            , charsize=1.6, charthick=2.
 
    WRITE_PNG, pngfile, TVRD(/TRUE)
 
@@ -231,11 +241,13 @@ hasfr_ofrac:
              , color=fix(cols) $
              , charsize=1.6, charthick=2.
 
+  al_legend, /top, /right, box=0, clear=0 $
+            , ['Total Halpha'] $
+            , charsize=1.6, charthick=2.
+
    WRITE_PNG, pngfile, TVRD(/TRUE)
 
-
    stop
-   
 
 hiisfr_ofrac:
    
@@ -289,9 +301,13 @@ hiisfr_ofrac:
              , color=fix(cols) $
              , charsize=1.6, charthick=2.
 
+  al_legend, /top, /right, box=0, clear=0 $
+            , ['Filtered Halpha'] $
+            , charsize=1.6, charthick=2.
+
    WRITE_PNG, pngfile, TVRD(/TRUE)
 
-;   stop
+   ;stop
    
 ;============  
 ; PLOT SFR only fraction AS A FUNCTION OF SPATIAL SCALE, FLUX CUT 
@@ -342,6 +358,10 @@ hiisfr_ofrac:
              , textcolor=fgcolor $
              , color=fix(cols) $
              , charsize=1.6, charthick=2.
+
+   al_legend, /top, /right, box=0, clear=0 $
+            , ['Filtered Halpha'] $
+            , charsize=1.6, charthick=2.
 
    WRITE_PNG, pngfile, TVRD(/TRUE)
 
@@ -398,10 +418,14 @@ hiisfr_ofrac:
              , color=fix(cols) $
              , charsize=1.6, charthick=2.
 
+   al_legend, /top, /right, box=0, clear=0 $
+            , ['Filtered Halpha'] $
+            , charsize=1.6, charthick=2.
+
    WRITE_PNG, pngfile, TVRD(/TRUE)
 
 
-;   stop
+   stop
    
 ;============  
 ; PLOT EMISSION FRACTION in MAP AS A FUNCTION OF SPATIAL SCALE

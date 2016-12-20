@@ -27,8 +27,6 @@ pro make_barchart_plots, show=show,nostop=nostop
   cols=range_gen(ngals,[30,255-30])
 
   
-  stop
-  
   for i=0,ngals-1 do begin
 
      galname=do_gals[i]
