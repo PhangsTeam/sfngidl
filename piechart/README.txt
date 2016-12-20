@@ -11,7 +11,6 @@ correct_ha.pro
 correct_co.pro
 make_coha_commonmask.pro
 
-
 2) convolution, i.e. generate maps at matched set of physical resolutions 
 convolve_for_sfco.pro
 
@@ -25,11 +24,8 @@ IDL Astro: https://github.com/wlandsman/IDLAstro
 AKL's cpropstoo: https://github.com/akleroy/cpropstoo
 AKL's gal_base: https://github.com/akleroy/galbase
 
-There are also a few routines that read the measurement savefile and generate 'summary/overview' plots, e.g.
-
-
- 
-
-
+There are also a few routines (more like scripts that you can cut/paste into IDL) that read the measurement savefile and generate 'summary/overview' plots, e.g.
+make_barchart_plots.pro
+make_summary_piechart_plots.pro
 
 
