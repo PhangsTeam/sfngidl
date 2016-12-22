@@ -1,4 +1,4 @@
-function sfng_get_basic_stats,data,la_flag=la_flag,robust=robust,dim=dim
+function sfng_get_basic_stats,data,la_flag=la_flag,robust=robust,dim=dim,nan=nan
 
   s=sfng_empty_stats_str()
 
