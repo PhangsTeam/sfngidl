@@ -2,7 +2,7 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
                       ,fits_in1=fits_in1,fits_in2=fits_in2 $
                       ,idl_in1=idl_in1,idl_in2=idl_in2 $
                       ,hdr_in1=hdr_in1,hdr_in2=hdr_in2 $
-                      ,savefile=savefile,tagname=tagname $
+                      ,savedir=savedir,savefile=savefile,tagname=tagname $
                       ,galaxy=galaxy, line_frequency=line_frequency, target_beam=target_beam $
                       ,expand_mask_edges=expand_mask_edges $
                       ,jy2k=jy2k, rebaseline=rebaseline $
@@ -30,14 +30,16 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
 ;               comparison. Defaults to current directory
 ;     reportdir = output directory for final PDF report. Defaults to
 ;                current directory
+;     savedir = output directory for IDL save structure. Defaults to
+;                current directory
 ;     jy2k = two-element vector representing flag (0-no,1-yes) about
 ;            whether cube requires conversion from Jy to K. Default is no.
 ;     rebaseline = two-element vector indicating whether profiles in cube requires rebaselining.
 ;                  -1: don't rebaseline, 0: remove offset, 1:
 ;                  linear, 2: quadratic. Default is -1 (no
 ;                  rebaselining done).
-;     tagname = string that will be used for filename prefix. Defaults
-;               to 'mygalaxy'
+;     tagname = string that will be used for FITS filename prefix. Defaults
+;               to 'mygalaxy'. 
 ;     galaxy = string, galaxy name that will be input to GAL_BASE to
 ;              find galaxy parameters
 ;     line_frequency = frequency in GHz of emission line in
@@ -69,10 +71,10 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
 ;     Plots (in plotdir) and, if requested, a summary report (in reportdir)
 ; PROCEDURE AND SUBROUTINE USED
 ;     Goddard IDLAstro library (not provided)
-;     Freudenreich Robust library (contrib to IDLAstro, not provided)
+;     Freudenreich Robust routines (contrib to IDLAstro, not provided)
 ;     AKL CPROPTOO library (not provided)
 ;     AKL GAL_BASE library (not provided)
-;     JPBlib: (provided in aux_pro/ subdirectory)
+;     JPBlib: (provided in aux/ subdirectory)
 ;             enlarge.pro, read_xcat.pro, write_xcat.pro,
 ;             linear_mpfit.pro, linear4mpfit.pro 
 ;
@@ -99,24 +101,26 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
 ;===================
 
   @sfng_constants.bat
-    
+
+  ; things that user can change via keywords
   use_savefile='cubecmp_results.sav'
   use_c1file='IDL_CUBE1'
   use_c2file='IDL_CUBE2'
   use_datadir = './orig_data/'
+  use_savedir = './savefiles/'
   use_outdir ='./good_data/'
   use_plotdir = './plots/'
   use_reportdir = './report/'
-  use_tagname = 'galaxy'
+  use_tagname = 'mygalaxy'
   use_line_frequency = restfreq_12co21/1.e9
-  use_jy2k = [0,0]
-  use_rebaseline = [-1,-1]
-  use_expand_mask_edges = [0,0]
-  use_xygrid=1
-  use_vgrid=1
+  use_jy2k = [0,0] ; cube [1,2] -- 1 means do Jy->K conversion
+  use_rebaseline = [-1,-1] ; -1 (do nothing) 0 (offset), 1 (linear) or 2 (quadratic) -- one value for each cube
+  use_expand_mask_edges = [0,0] ; [# edge_pixels, # edge_channels] to be blanked (in addition to common FoV)
+  use_xygrid=1 ; which cube is master for (x,y) pixel grid?
+  use_vgrid=1 ; which cube is master for channelisation?
   do_report=1
 
-  use_baseline_order = [1,1] ; 0 (offset), 1 (linear) or 2 (quadratic) -- one value for each cube
+  ; things that user can change here 
   use_win = 0L
   use_avgbox=3
   use_avgspecbox=0
@@ -127,7 +131,7 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
   kms2ms=1000.d
   use_c1str='CUBE1'
   use_c2str='CUBE2'
- 
+
 ;===================
 ; process user inputs
 ;===================
@@ -138,6 +142,7 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
   if keyword_set(outdir) then use_outdir=outdir
   if keyword_set(plotdir) then use_plotdir=plotdir
   if keyword_set(reportdir) then use_reportdir=reportdir
+  if keyword_set(savedir) then use_savedir=savedir
   if keyword_set(tagname) then use_tagname=tagname
   if keyword_set(line_frequency) then use_line_frequency=line_frequency
   if keyword_set(target_beam) then use_target_beam=target_beam
@@ -155,9 +160,11 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
   use_outdir=file_search(use_outdir,/mark,/full)
   use_plotdir=file_search(use_plotdir,/mark,/full)
   use_reportdir=file_search(use_reportdir,/mark,/full)
+  use_savedir=file_search(use_savedir,/mark,/full)
 
-  if use_datadir eq '' or use_outdir eq '' or use_plotdir eq '' then $
-     message,'Problem with data/out/plot directories. Do they exist?'
+  if use_datadir eq '' or use_outdir eq '' or $
+     use_plotdir eq '' or use_savedir eq '' then $
+     message,'Problem with data/out/plot/save directories. Do they exist?'
 
   if do_report eq 1 and use_reportdir eq '' then $
      message,'Problem with report directory?'
@@ -195,23 +202,17 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
 ; verify that units are K, km/s, and that cubes have beam and grid information in header.
 ;==============
      
-  c1hdr_fix=c1hdr
-  c1beam=fltarr(3)+nan
-  c1pixscale=nan
-  c1chanw=nan
   if keyword_set(verbose) then message,'Checking header for data: '+use_c1file,/info
 
+  c1hdr_fix=c1hdr
   pass1=sfng_check_header(hdr=c1hdr, fixhdr=c1hdr_fix, comments = c1_comments $
-                            , beam=c1_beam, pixscale=c1_pixscale, chanw=c1_chanw)
+                            , beam=c1_beam, pixscale=c1_pixscale, chanw=c1_chanw, unit=c1_bunit)
      
-  c2hdr_fix=c2hdr
-  c2beam=fltarr(3)+nan
-  c2pixscale=nan
-  c2chanw=nan
   if keyword_set(verbose) then message,'Checking header for data: '+use_c2file,/info
 
+  c2hdr_fix=c2hdr
   pass2=sfng_check_header(hdr=c2hdr, fixhdr=c2hdr_fix, comments = c2_comments $
-                            , beam=c2_beam, pixscale=c2_pixscale, chanw=c2_chanw)
+                            , beam=c2_beam, pixscale=c2_pixscale, chanw=c2_chanw, unit=c2_bunit)
    
      
   if pass1 ne 1 or pass2 ne 1 or keyword_set(verbose) then begin
@@ -228,8 +229,12 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
   ccmp_str.c2_pixscale=c2_pixscale*3600.
   ccmp_str.c1_beam=c1_beam
   ccmp_str.c2_beam=c2_beam
+  ccmp_str.c1_bunit=c1_bunit
+  ccmp_str.c2_bunit=c2_bunit
   ccmp_str.c1_chanw=c1_chanw
   ccmp_str.c2_chanw=c2_chanw
+  ccmp_str.c1_dims=size(c1,/dim)
+  ccmp_str.c2_dims=size(c2,/dim)
   
   if pass1 ne 1 or pass2 ne 1 then begin
      print,'Headers did not pass sfng_check_header. Check logs, then .c to continue'
@@ -279,7 +284,6 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
 ;==============
 ; match the cubes -- resolution and gridding parameters
 ;==============
-  stop
   
    sfng_match_cubes,idl_in1=c1,idl_in2=c2,hdr_in1=c1hdr,hdr_in2=c2hdr $
                     ,idl_out1=c1match,idl_out2=c2match,hdr_out1=c1hdr_out,hdr_out2=c2hdr_out $
@@ -324,6 +328,7 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
                        ,fits_outmask=use_tagname+'_commonfov_mask.fits',/apply $
                        ,fits_out1=use_c1file+'.commFoV.fits' $
                        ,fits_out2=use_c2file+'.commFoV.fits' $
+                       ,outdir=use_outdir $
                        ,idl_out1=c1fov,idl_out2=c2fov,hdr_out1=c1hdr_out,hdr_out2=c2hdr_out $
                        ,idl_outmask=common_fov_mask, hdr_outmask=common_fov_hdr
 
@@ -367,11 +372,12 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
                       ,idl_out=c1_rebase $
                       ,hdr_out=c1_rebase_hdr $
                       ,order=use_rebaseline[0] $
-                      ,fits_out=use_tagname+'_c1_rebase' 
-      
+                      ,fits_out=use_tagname+'_c1_rebase' $
+                      ,outdir=use_outdir 
+
       c1=c1_rebase & c1hdr=c1_rebase_hdr 
       
-      ccmp_str.c1_rebase_flag=do_rebase1
+      ccmp_str.c1_rebase_flag=1
       ccmp_str.c1_rebase_order=use_rebaseline[0]
       
       c1_comments=[c1_comments,'Rebaselined cube with order: '+strtrim(string(use_rebaseline[0]),2)]
@@ -405,11 +411,12 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
                       ,idl_out=c2_rebase $
                       ,hdr_out=c2_rebase_hdr $
                       ,order=use_rebaseline[1] $
-                      ,fits_out=use_tagname+'_c2_rebase' 
-      
+                      ,fits_out=use_tagname+'_c2_rebase' $
+                      ,outdir=use_outdir 
+
       c2=c2_rebase & c2hdr=c2_rebase_hdr 
       
-      ccmp_str.c2_rebase_flag=do_rebase2
+      ccmp_str.c2_rebase_flag=1
       ccmp_str.c2_rebase_order=use_rebaseline[1]
       
       c2_comments=[c2_comments,'Rebaselined cube with order: '+strtrim(string(use_rebaseline[1]),2)]
@@ -439,6 +446,8 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
    sxaddpar,c1noise_hdr,'HISTORY','Noise cube generated by make_noise_cube'
    writefits,use_outdir+use_tagname+'_c1noise.fits',c1noise,c1noise_hdr
 
+   c1_noisestats=sfng_get_basic_stats(c1noise,/nan)
+
    make_noise_cube, cube_in = c1 $
                     , cube_hdr = c1hdr $
                     , out_cube = c1noise2d $
@@ -448,7 +457,7 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
                     , box=use_avgbox $
                     , spec_box=use_avgspecbox
 
-   c1noise2d=c1noise[*,*,use_midchan]
+   c1noise2d=c1noise2d[*,*,use_midchan]
    c1noise2d_hdr=twod_head(c1hdr)
    sxaddpar,c1noise2d_hdr,'DATAMAX',max(c1noise2d,/nan)
    sxaddpar,c1noise2d_hdr,'DATAMIN',min(c1noise2d,/nan)
@@ -469,16 +478,18 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
    sxaddpar,c2noise_hdr,'HISTORY','Noise cube generated by make_noise_cube'
    writefits,use_outdir+use_tagname+'_c2noise.fits',c2noise,c2noise_hdr
 
-   make_noise_cube, cube_in = c1 $
-                    , cube_hdr = c1hdr $
-                    , out_cube = c1noise2d $
-                    , mask_in = c1sigmask $
+   c2_noisestats=sfng_get_basic_stats(c2noise,/nan)
+
+   make_noise_cube, cube_in = c2 $
+                    , cube_hdr = c2hdr $
+                    , out_cube = c2noise2d $
+                    , mask_in = c2sigmask $
                     , /iterate $
                     , /twod $
                     , box=use_avgbox $
                     , spec_box=use_avgspecbox
 
-   c2noise2d=c2noise[*,*,use_midchan]
+   c2noise2d=c2noise2d[*,*,use_midchan]
    c2noise2d_hdr=twod_head(c2hdr)
    sxaddpar,c2noise2d_hdr,'DATAMAX',max(c2noise2d,/nan)
    sxaddpar,c2noise2d_hdr,'DATAMIN',min(c2noise2d,/nan)
@@ -604,10 +615,13 @@ end
 ;======================
 
    fovidx=where(common_fov_mask eq 1, fovct)  
-   c1sigidx=where(c1sigmask eq 1, c1ct, comp=c1nosigidx)
-   c2sigidx=where(c2sigmask eq 1, c2ct, comp=c2nosigidx)
+   c1sigidx=where(c1sigmask eq 1, c1ct, comp=c1nosigidx);,ncomp=noisect_c1)
+   c2sigidx=where(c2sigmask eq 1, c2ct, comp=c2nosigidx);,ncomp=noisect_c2)
    jsigidx=where(joint_sigmask eq 1, jct)
    nosigidx=where(no_sigmask eq 1, nsct)
+
+   noisect_c1=fovct-c1ct
+   noisect_c2=fovct-c2ct
    
    ccmp_str.npix_cmp_fov=fovct
    ccmp_str.c1_npix_signalmask=c1ct
@@ -615,9 +629,9 @@ end
    ccmp_str.npix_jointsignalmask=jct
    ccmp_str.npix_nosignalmask=nsct
 
-;======================
-; STATISTICS RE TOTAL FLUX
-;======================
+;==============================================
+; STATISTICS RE TOTAL FLUX AND NUMBER OF PIXELS
+;==============================================
    
   ccmp_str.c1_totflux=total(c1,/nan)
   ccmp_str.c2_totflux=total(c2,/nan)
@@ -636,6 +650,152 @@ end
   ccmp_str.c2_npix_signalmask=c2ct
   ccmp_str.npix_jointsignalmask=jct
   ccmp_str.npix_nosignalmask=nsct
+
+
+;======================
+; generate noise histograms
+;======================
+
+  nzmin=min(c1[c1nosigidx],/nan) < min(c2[c2nosigidx],/nan) < min(diffcube[nosigidx],/nan)
+  nzmax=max(c1[c1nosigidx],/nan) > max(c2[c2nosigidx],/nan) > max(diffcube[nosigidx],/nan)
+  nzmin_disp=percentile(c1[c1nosigidx],99) < percentile(c2[c2nosigidx],99) < percentile(diffcube[nosigidx],99)
+  nzmax_disp=percentile(c1[c1nosigidx],1) > percentile(c2[c2nosigidx],1) > percentile(diffcube[nosigidx],1)
+  nbins=round(noisect_c1/1000.) < round(noisect_c2/1000.) 
+  xlim=abs(nzmin_disp)>abs(nzmax_disp)
+  xr=[-xlim,xlim]
+
+    
+;======================
+; CUBE 1
+;======================
+
+  c1_noisestats_nosignal=sfng_get_basic_stats(c1[c1nosigidx],/nan)
+
+  hhcube=histogram(c1[c1nosigidx],max=nzmax,min=nzmin,locations=nzbins,nbins=nbins)
+
+  use_pngfile='c1_noisehisto.png'
+
+  window,use_win,xsize=600,ysize=600 & use_win=use_win+1
+  yr=[0,1.2*(max(hhcube)/float(total(hhcube,/nan)))]
+  fitlim=0.2*(max(hhcube)/float(total(hhcube,/nan)))
+  tit='Pixels outside emission mask'
+  
+  cgplot,nzbins,(hhcube/float(total(hhcube,/nan))),/ysty,/xsty $
+         ,/nodata,xr=xr,yr=yr,xtit='Tmb [K]',ytit='log(Npixels)',tit=tit $
+         ,xthick=2,ythick=2,thick=2,charsize=1.8,charthick=1.7
+  cgplot,[0,0],[-100,100],lines=1,/overplot,thick=2
+  cgplot,nzbins,(hhcube/float(total(hhcube,/nan))),psym=10,/overplot,thick=2
+
+  binsize=nzbins[1]-nzbins[0]
+  binCenters = nzbins + (binsize/2.0)
+  fitbins=where((hhcube/total(hhcube)) gt fitlim,fct)
+  yfit = GaussFit(binCenters[fitbins],hhcube[fitbins]/float(total(hhcube,/nan)), coeffs, NTERMS=3)
+  cgplot,binCenters[fitbins],yfit,color=fsc_color('red'),/overplot,thick=2
+
+  al_legend, /top,/left, box=0,clear=0 $
+                ,[use_c1str, $
+                  'Mean: '+sigfig(c1_noisestats.mean,3,/sci), $
+                  'RMS: '+ sigfig(c1_noisestats.rms,3,/sci)] $
+                , lines=-99, charsize=1.8,charthick=1.7
+
+  al_legend, /top,/right, box=0,clear=0 $
+             ,['Gauss Fit', $
+               'mu: '+sigfig(coeffs[1],3,/sci), $
+               'width: '+sigfig(coeffs[2],3,/sci)] $
+             , lines=-99, charsize=1.8,charthick=1.7
+
+  write_png,use_plotdir+use_pngfile,TVRD(/TRUE)
+
+;======================
+; CUBE 2
+;======================
+
+  c2_noisestats_nosignal=sfng_get_basic_stats(c2[c2nosigidx],/nan)
+
+  hhcube=histogram(c2[c2nosigidx],max=nzmax,min=nzmin,locations=nzbins,nbins=nbins)
+
+    use_pngfile='c2_noisehisto.png'
+
+  window,use_win,xsize=600,ysize=600 & use_win=use_win+1
+  yr=[0,1.2*(max(hhcube)/float(total(hhcube,/nan)))]
+  fitlim=0.2*(max(hhcube)/float(total(hhcube,/nan)))
+  tit='Pixels outside emission mask'
+  
+  cgplot,nzbins,(hhcube/float(total(hhcube,/nan))),/ysty,/xsty $
+         ,/nodata,xr=xr,yr=yr,xtit='Tmb [K]',ytit='log(Npixels)',tit=tit $
+         ,xthick=2,ythick=2,thick=2,charsize=1.8,charthick=1.7
+  cgplot,[0,0],[-100,100],lines=1,/overplot,thick=2
+  cgplot,nzbins,(hhcube/float(total(hhcube,/nan))),psym=10,/overplot,thick=2
+
+  binsize=nzbins[1]-nzbins[0]
+  binCenters = nzbins + (binsize/2.0)
+  fitbins=where((hhcube/total(hhcube)) gt fitlim,fct)
+  yfit = GaussFit(binCenters[fitbins],hhcube[fitbins]/float(total(hhcube,/nan)), coeffs, NTERMS=3)
+  cgplot,binCenters[fitbins],yfit,color=fsc_color('red'),/overplot,thick=2
+
+  al_legend, /top,/left, box=0,clear=0 $
+                ,[use_c2str, $
+                  'Mean: '+sigfig(c2_noisestats.mean,3,/sci), $
+                  'RMS: '+ sigfig(c2_noisestats.rms,3,/sci)] $
+                , lines=-99, charsize=1.8,charthick=1.7
+
+  al_legend, /top,/right, box=0,clear=0 $
+             ,['Gauss Fit', $
+               'mu: '+sigfig(coeffs[1],3,/sci), $
+               'width: '+sigfig(coeffs[2],3,/sci)] $
+             , lines=-99, charsize=1.8,charthick=1.7
+
+    write_png,use_plotdir+use_pngfile,TVRD(/TRUE)
+
+;======================
+; DIFFCUBE
+;======================
+  diffcube_stats=sfng_get_basic_stats(diffcube,/nan)
+  diffcube_stats_nosignal=sfng_get_basic_stats(diffcube[nosigidx],/nan)
+
+  hhcube=histogram(diffcube[nosigidx],max=nzmax,min=nzmin,locations=nzbins,nbins=nbins)
+
+  use_pngfile='diffcube_noisehisto.png'
+
+  window,use_win,xsize=600,ysize=600 & use_win=use_win+1
+  yr=[0,1.2*(max(hhcube)/float(total(hhcube,/nan)))]
+  fitlim=0.2*(max(hhcube)/float(total(hhcube,/nan)))
+  tit='Pixels outside emission mask'
+  
+  cgplot,nzbins,(hhcube/float(total(hhcube,/nan))),/ysty,/xsty $
+         ,/nodata,xr=xr,yr=yr,xtit='Tmb [K]',ytit='log(Npixels)',tit=tit $
+         ,xthick=2,ythick=2,thick=2,charsize=1.8,charthick=1.7
+  cgplot,[0,0],[-100,100],lines=1,/overplot,thick=2
+  cgplot,nzbins,(hhcube/float(total(hhcube,/nan))),psym=10,/overplot,thick=2
+
+  binsize=nzbins[1]-nzbins[0]
+  binCenters = nzbins + (binsize/2.0)
+  fitbins=where((hhcube/total(hhcube)) gt fitlim,fct)
+  yfit = GaussFit(binCenters[fitbins],hhcube[fitbins]/float(total(hhcube,/nan)), coeffs, NTERMS=3)
+  cgplot,binCenters[fitbins],yfit,color=fsc_color('red'),/overplot,thick=2
+
+  al_legend, /top,/left, box=0,clear=0 $
+                ,['Difference Cube', $
+                  'Mean: '+sigfig(c1_noisestats.mean,3,/sci), $
+                  'RMS: '+ sigfig(c1_noisestats.rms,3,/sci)] $
+                , lines=-99, charsize=1.8,charthick=1.7
+
+  al_legend, /top,/right, box=0,clear=0 $
+             ,['Gauss Fit', $
+               'mu: '+sigfig(coeffs[1],3,/sci), $
+               'width: '+sigfig(coeffs[2],3,/sci)] $
+             , lines=-99, charsize=1.8,charthick=1.7
+
+    write_png,use_plotdir+use_pngfile,TVRD(/TRUE)
+
+;======================
+; SAVE NOISE STATISTICS
+;======================
+
+  ccmp_str.c1_noisestats_nosignal=c1_noisestats_nosignal
+  ccmp_str.c2_noisestats_nosignal=c2_noisestats_nosignal
+  ccmp_str.diffcube_stats=diffcube_stats
+  ccmp_str.diffcube_stats_nosignal=diffcube_stats_nosignal
 
 ;======================
 ; STATISTICS RE FLUX PER CHANNEL
@@ -702,10 +862,7 @@ end
   ccmp_str.fluxdiffperchan_jointsignalmask=ptr_new(diff_chanflux_jsm)
   ccmp_str.fluxdiffperchan_nosignalmask=ptr_new(diff_chanflux_nosm)
 
-  ccmp_str.c1_noisestats=sfng_get_basic_stats(c1[c1nosigidx])
-  ccmp_str.c2_noisestats=sfng_get_basic_stats(c2[c2nosigidx])
-  ccmp_str.diffcube_stats=sfng_get_basic_stats(diffcube)
-
+ 
 ;======================
 ; generate 'spectra' -- flux/rms per chan figures
 ;======================
@@ -717,7 +874,7 @@ end
 ; a. Flux per channel
 ;======================
 
-  use_pngfile=use_tagname+'flux_per_channel.png'
+  use_pngfile='flux_per_channel.png'
   
   window,use_win,xsize=900,ysize=400 & use_win=use_win+1
   !p.position=[0.2,0.2,0.9,0.8]
@@ -749,7 +906,7 @@ end
 ; b. Flux within joint signal mask per channel
 ;======================
 
-  use_pngfile=use_tagname+'flux_per_channel_jointsignalmask.png'
+  use_pngfile='flux_per_channel_jointsignalmask.png'
   
   window,use_win,xsize=900,ysize=400 & use_win=use_win+1
   !p.position=[0.2,0.2,0.9,0.8]
@@ -780,7 +937,7 @@ end
 ; c. Flux difference per channel
 ;======================
 
-  use_pngfile=use_tagname+'diffcube_flux_per_channel.png'
+  use_pngfile='diffcube_flux_per_channel.png'
 
   window,use_win,xsize=900,ysize=400 & use_win=use_win+1
   ymax=max(diff_chanflux,/nan)
@@ -808,7 +965,7 @@ end
 ; d. Flux difference per channel inside the joint signal mask
 ;======================
 
-  use_pngfile=use_tagname+'diffcube_flux_per_channel_jointsignalmask.png'
+  use_pngfile='diffcube_flux_per_channel_jointsignalmask.png'
 
   window,use_win,xsize=900,ysize=400 & use_win=use_win+1
   ymax=max(diff_chanflux_jsm,/nan)
@@ -831,13 +988,12 @@ end
             ,charsize=1.,thick=2,charthick=1.8
 
   write_png,use_plotdir+use_pngfile,TVRD(/TRUE)
-
   
 ;======================
 ; a. RMS per channel
 ;======================
 
-  use_pngfile=use_tagname+'rms_per_channel.png'
+  use_pngfile='rms_per_channel.png'
 
   window,use_win,xsize=900,ysize=400 & use_win=use_win+1
   ymax=max(c1_chanrms,/nan) > max(c2_chanrms,/nan)
@@ -872,7 +1028,7 @@ end
 ; b. RMS per channel in nosigmask
 ;======================
 
-  use_pngfile=use_tagname+'rms_per_channel_nosignalmask.png'
+  use_pngfile='rms_per_channel_nosignalmask.png'
 
   window,use_win,xsize=900,ysize=400 & use_win=use_win+1
   ymax=max(c1_chanrms_nosm,/nan) > max(c2_chanrms_nosm,/nan)
@@ -939,7 +1095,11 @@ end
 ; generate correlation plots
 ;======================
 
-  use_pngfile=use_tagname+'lincorr_c1c2.png'
+;======================
+; Linear Cube 1 vs Cube 2
+;======================
+  
+  use_pngfile='lincorr_c1c2.png'
 
   plotmax=1.25*(max(c1[jsigidx],/nan)>max(c2[jsigidx],/nan))
   xaxis=plotmax*findgen(100)/100.
@@ -950,9 +1110,9 @@ end
 
   cgplot,c1[jsigidx],c2[jsigidx],xtit=use_c1str,ytit=use_c2str,tit='Pixel-pixel correlation inside common mask', $
        charsize=1.5,/nodata,/xsty,/ysty,xr=xr,yr=yr,xthick=2,ythick=2,thick=2,charthick=1.8
-  cgplot,c1[jsigidx],c2[jsigidx],psym=3,color=fsc_color('grey'),/overplot,thick=2
+  cgplot,c1[jsigidx],c2[jsigidx],psym=3,color=fsc_color('dark grey'),/overplot,thick=2
   cgplot,xaxis,yfit,color=fsc_color('blue'),lines=2,/overplot,thick=3
-  equality,color=fsc_color('black')
+  equality,color=fsc_color('black'),thick=2
 
   plotsym,0,1.2,/fill
   
@@ -978,10 +1138,286 @@ end
             ,colors=[fsc_color('red')] $
             ,charsize=1.5,psym=8,charthick=1.5
 
+  write_png,use_plotdir+use_pngfile,TVRD(/TRUE)
+
+
+;================
+; generate density plot
+;================
+
+  use_pngfile='lindens_c1c2.png'
+
+  binsize2d=binsize/10.
+  density = Hist_2D(c1[jsigidx],c2[jsigidx], Min1=xr[0], Max1=xr[1], Bin1=binsize2d, $
+                           Min2=yr[0], Max2=yr[1], Bin2=binsize2d)   
+                           
+   maxDensity = Ceil(Max(density)/1e2) * 1e2
+   scaledDensity = BytScl(density, Min=0, Max=maxDensity)
+                           
+   window,use_win,xsize=400,ysize=400 & use_win=use_win+1
+   loadct,20,rgb_table=palette
+   TVLCT, cgColor('gray', /Triple), 0
+   
+   cgImage, scaledDensity, XRange=xr, YRange=yr, /Axes, Palette=palette, $
+      XTitle=use_c1str, YTitle=use_c2str, $
+      Position=[0.125, 0.125, 0.825, 0.825]
+      
+   cgColorbar, position=[0.85,0.125,0.88,0.825]  $
+               , Title='Npixels', /vertical, /right $
+               ,Range=[0, maxDensity], NColors=254, Bottom=1,Palette=palette $
+               ,charsize=1.1,tcharsize=1.1
+
+   write_png,use_plotdir+use_pngfile,TVRD(/TRUE)
+
+    
+;======================
+; Linear Cube 2 vs Cube 1
+;======================
+
+  use_pngfile='lincorr_c2c1.png'
+
+  plotmax=1.25*(max(c1[jsigidx],/nan)>max(c2[jsigidx],/nan))
+  xaxis=plotmax*findgen(100)/100.
+  yfit=xaxis*res_linc2c1[0]+res_linc2c1[1]
+  
+  window,use_win,xsize=600,ysize=600 & use_win=use_win+1
+  xr=[-0.05,plotmax] & yr=[-0.05,plotmax]
+
+  cgplot,c2[jsigidx],c1[jsigidx],xtit=use_c2str,ytit=use_c1str,tit='Pixel-pixel correlation inside common mask', $
+       charsize=1.5,/nodata,/xsty,/ysty,xr=xr,yr=yr,xthick=2,ythick=2,thick=2,charthick=1.8
+  cgplot,c2[jsigidx],c1[jsigidx],psym=3,color=fsc_color('dark grey'),/overplot,thick=2
+  cgplot,xaxis,yfit,color=fsc_color('blue'),lines=2,/overplot,thick=3
+  equality,color=fsc_color('black'),thick=2
+
+  plotsym,0,1.2,/fill
+  
+  xmin = 0. & xmax = plotmax & binsize = round(plotmax*10.)/100.
+  bin_prof, [c2[jsigidx]] $
+            ,[c1[jsigidx]] $
+            , xmin=xmin, xmax=xmax, binsize=binsize $
+            , xmid=xmid, medprof=medprof, madprof=madprof
+  oploterror, xmid, medprof, madprof $
+              , errcolor=fsc_color('red'), color=fsc_color('red') $
+              , errthick=2, psym=8, symsize=1.5
+  oplot, xmid, medprof $
+         , psym=8, symsize=1.5, color=fsc_color('red')
+
+  
+  al_legend,/top,/left,clear=0, box=0 $
+            , ['Equality','Slope: '+sigfig(res_linc2c1[0],3)] $
+            ,colors=[fsc_color('black'),fsc_color('blue')] $
+            ,charsize=1.5,thick=[2,3],linsize=0.5,lines=[0,2],charthick=1.5
+
+  al_legend,/bottom,/right,clear=0, box=0 $
+            , ['Running median, y on x'] $
+            ,colors=[fsc_color('red')] $
+            ,charsize=1.5,psym=8,charthick=1.5
+
+  write_png,use_plotdir+use_pngfile,TVRD(/TRUE)
+
+;================
+; generate density plot
+;================
+
+  use_pngfile=+'lindens_c2c1.png'
+    
+  binsize2d=binsize/10.
+  density = Hist_2D(c2[jsigidx],c1[jsigidx], Min1=xr[0], Max1=xr[1], Bin1=binsize2d, $
+                           Min2=yr[0], Max2=yr[1], Bin2=binsize2d)   
+                           
+  maxDensity = Ceil(Max(density)/1e2) * 1e2
+  scaledDensity = BytScl(density, Min=0, Max=maxDensity)
+                           
+  window,use_win,xsize=400,ysize=400 & use_win=use_win+1
+  loadct,20,rgb_table=palette
+  TVLCT, cgColor('gray', /Triple), 0
+  
+  cgImage, scaledDensity, XRange=xr, YRange=yr, /Axes, Palette=palette, $
+           XTitle=use_c1str, YTitle=use_c2str, $
+           Position=[0.125, 0.125, 0.825, 0.825]
+  
+  cgColorbar, position=[0.85,0.125,0.88,0.825]  $
+              , Title='Npixels', /vertical, /right $
+              ,Range=[0, maxDensity], NColors=254, Bottom=1,Palette=palette $
+              ,charsize=1.1,tcharsize=1.1
+
     write_png,use_plotdir+use_pngfile,TVRD(/TRUE)
 
-  stop
+
   
+    
+;======================
+; Log Cube 1 vs Cube 2
+;======================
+  
+  use_pngfile='logcorr_c1c2.png'
+
+  plotmax=1.25*(max(c1[jsigidx],/nan)>max(c2[jsigidx],/nan))
+  plotmin=0.75*(min(c1[jsigidx],/nan)<min(c2[jsigidx],/nan))
+  
+  window,use_win,xsize=600,ysize=600 & use_win=use_win+1
+  xr=[plotmin,plotmax] & yr=[plotmin,plotmax]
+
+  cgplot,c1[jsigidx],c2[jsigidx],xtit=use_c1str,ytit=use_c2str,tit='Pixel-pixel correlation inside common mask', $
+       charsize=1.5,/nodata,/xsty,/ysty,xr=xr,yr=yr,xthick=2,ythick=2,thick=2,charthick=1.8,/xlo,/ylo
+  cgplot,c1[jsigidx],c2[jsigidx],psym=3,color=fsc_color('dark grey'),/overplot,thick=2
+  equality,color=fsc_color('black'),thick=2
+
+  plotsym,0,1.2,/fill
+  
+  xmin = plotmin & xmax = plotmax & binsize = round(plotmax*10.)/100.
+  bin_prof, [c1[jsigidx]] $
+            ,[c2[jsigidx]] $
+            , xmin=xmin, xmax=xmax, binsize=binsize $
+            , xmid=xmid, medprof=medprof, madprof=madprof ;, madlogprof=madlogprof
+;  oploterror, xmid, medprof, madprof $
+;              , errcolor=fsc_color('red'), color=fsc_color('red') $
+;              , errthick=2, psym=8, symsize=1.5
+  oplot, xmid, medprof $
+         , psym=8, symsize=1.5, color=fsc_color('red')
+
+  
+;  al_legend,/top,/left,clear=0, box=0 $
+;            , ['Equality','Slope: '+sigfig(res_linc1c2[0],3)] $
+;            ,colors=[fsc_color('black'),fsc_color('blue')] $
+;            ,charsize=1.5,thick=[2,3],linsize=0.5,lines=[0,2],charthick=1.5
+
+;  al_legend,/bottom,/right,clear=0, box=0 $
+;            , ['Running median, y on x'] $
+;            ,colors=[fsc_color('red')] $
+;            ,charsize=1.5,psym=8,charthick=1.5
+
+  write_png,use_plotdir+use_pngfile,TVRD(/TRUE)
+
+
+;================
+; generate density plot
+;================
+
+  use_pngfile='logdens_c1c2.png'
+  
+  binsize2d=binsize
+  density = Hist_2D(alog10(c1[jsigidx]),alog10(c2[jsigidx]) $
+                    , Min1=alog10(xr[0]), Max1=alog10(xr[1]), Bin1=binsize2d $
+                           , Min2=alog10(yr[0]), Max2=alog10(yr[1]), Bin2=binsize2d)   
+                           
+  maxDensity = Ceil(Max(density)/1e2) * 1e2
+  scaledDensity = BytScl(density, Min=0, Max=maxDensity)
+                           
+  window,use_win,xsize=400,ysize=400 & use_win=use_win+1
+  loadct,20,rgb_table=palette
+  TVLCT, cgColor('gray', /Triple), 0
+  
+  cgImage, scaledDensity, XRange=alog10(xr), YRange=alog10(yr), /Axes, Palette=palette, $
+           XTitle=use_c1str, YTitle=use_c2str, $
+           Position=[0.125, 0.125, 0.825, 0.825]
+  
+  cgColorbar, position=[0.85,0.125,0.88,0.825]  $
+              , Title='Npixels', /vertical, /right $
+              ,Range=[0, maxDensity], NColors=254, Bottom=1,Palette=palette $
+              ,charsize=1.1,tcharsize=1.1
+
+  write_png,use_plotdir+use_pngfile,TVRD(/TRUE)
+
+
+;======================
+; Log Cube 2 vs Cube 1
+;======================
+  
+  use_pngfile='logcorr_c2c1.png'
+
+  plotmax=1.25*(max(c1[jsigidx],/nan)>max(c2[jsigidx],/nan))
+  plotmin=0.75*(min(c1[jsigidx],/nan)<min(c2[jsigidx],/nan))
+  
+  window,use_win,xsize=600,ysize=600 & use_win=use_win+1
+  xr=[plotmin,plotmax] & yr=[plotmin,plotmax]
+
+  cgplot,c2[jsigidx],c1[jsigidx],xtit=use_c2str,ytit=use_c1str,tit='Pixel-pixel correlation inside common mask', $
+       charsize=1.5,/nodata,/xsty,/ysty,xr=xr,yr=yr,xthick=2,ythick=2,thick=2,charthick=1.8,/xlo,/ylo
+  cgplot,c2[jsigidx],c1[jsigidx],psym=3,color=fsc_color('dark grey'),/overplot,thick=2
+  equality,color=fsc_color('black'),thick=2
+
+  plotsym,0,1.2,/fill
+  
+  xmin = plotmin & xmax = plotmax & binsize = round(plotmax*10.)/100.
+  bin_prof, [c2[jsigidx]] $
+            ,[c1[jsigidx]] $
+            , xmin=xmin, xmax=xmax, binsize=binsize $
+            , xmid=xmid, medprof=medprof, madprof=madprof ;, madlogprof=madlogprof
+;  oploterror, xmid, medprof, madprof $
+;              , errcolor=fsc_color('red'), color=fsc_color('red') $
+;              , errthick=2, psym=8, symsize=1.5
+  oplot, xmid, medprof $
+         , psym=8, symsize=1.5, color=fsc_color('red')
+
+  
+;  al_legend,/top,/left,clear=0, box=0 $
+;            , ['Equality','Slope: '+sigfig(res_linc1c2[0],3)] $
+;            ,colors=[fsc_color('black'),fsc_color('blue')] $
+;            ,charsize=1.5,thick=[2,3],linsize=0.5,lines=[0,2],charthick=1.5
+
+;  al_legend,/bottom,/right,clear=0, box=0 $
+;            , ['Running median, y on x'] $
+;            ,colors=[fsc_color('red')] $
+;            ,charsize=1.5,psym=8,charthick=1.5
+
+    write_png,use_plotdir+use_pngfile,TVRD(/TRUE)
+
+    
+;================
+; generate density plot
+;================
+
+  use_pngfile='logdens_c2c1.png'
+  
+  binsize2d=binsize
+  density = Hist_2D(alog10(c2[jsigidx]),alog10(c1[jsigidx]) $
+                    , Min1=alog10(xr[0]), Max1=alog10(xr[1]), Bin1=binsize2d $
+                           , Min2=alog10(yr[0]), Max2=alog10(yr[1]), Bin2=binsize2d)   
+                           
+  maxDensity = Ceil(Max(density)/1e2) * 1e2
+  scaledDensity = BytScl(density, Min=0, Max=maxDensity)
+                           
+  window,use_win,xsize=400,ysize=400 & use_win=use_win+1
+  loadct,20,rgb_table=palette
+  TVLCT, cgColor('gray', /Triple), 0
+  
+  cgImage, scaledDensity, XRange=alog10(xr), YRange=alog10(yr), /Axes, Palette=palette, $
+           XTitle=use_c2str, YTitle=use_c1str, $
+           Position=[0.125, 0.125, 0.825, 0.825]
+  
+  cgColorbar, position=[0.85,0.125,0.88,0.825]  $
+              , Title='Npixels', /vertical, /right $
+              ,Range=[0, maxDensity], NColors=254, Bottom=1,Palette=palette $
+              ,charsize=1.1,tcharsize=1.1
+
+  write_png,use_plotdir+use_pngfile,TVRD(/TRUE)
+
+
+
+
+  
+save_structure:
+;================
+;save the results structure
+;================
+
+   save,file=use_savedir+savefile,ccmp_str
+
+   
+produce_report:
+;================
+;
+;================
+
+   if do_report eq 1 then begin
+      sfng_make_latex_elements,ccmp_str
+      sfng_compile_latex,ccmp_str
+   end
+
+   stop
+   stop
+   
   the_end:
   return
   
