@@ -7,8 +7,8 @@ function sfng_empty_cubecmp_str
               c2_file: '' , $
               c1_rebase_flag: 0 , $
               c2_rebase_flag: 0 , $
-              c1_rebase_order: nan , $
-              c2_rebase_order: nan , $
+              c1_rebase_order: -1 , $
+              c2_rebase_order: -1 , $
               c1_jy2k_flag: 0 , $
               c2_jy2k_flag: 0 , $
               cmp_fov_fits: '' , $
@@ -22,8 +22,12 @@ function sfng_empty_cubecmp_str
               c2_pixscale: nan , $
               c1_chanw: nan , $
               c2_chanw: nan , $
+              c1_bunit: '' , $
+              c2_bunit: '' , $
               c1_beam: fltarr(3) , $
               c2_beam: fltarr(3) , $
+              c1_dims: fltarr(3) , $
+              c2_dims: fltarr(3) , $
               pixscale_as: nan , $
               chanw_kms: nan , $
               angres_as: nan , $
@@ -66,6 +70,7 @@ function sfng_empty_cubecmp_str
               diffcube_stats: stats_struct , $
               diffcube_stats_nosignal: stats_struct , $
               rpx_c1c2: nan , $
+              rank_c1c2: fltarr(2) , $
               lincorr_c1c2: fltarr(2) , $
               lincorr_c2c1: fltarr(2) , $
               logcorr_c1c2: fltarr(2) , $
