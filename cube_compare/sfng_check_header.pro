@@ -5,6 +5,7 @@ function sfng_check_header, hdr = hdr $
                             , beam = beam $
                             , bunit = bunit $
                             , chanw = chanw $
+                            , unit = unit $
                             , help = help
 
 ;+  NAME:
@@ -82,6 +83,7 @@ function sfng_check_header, hdr = hdr $
 ; UNITS
 ; &%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%
 
+  unit_str='unknown'
   units = sxpar(hdr, "BUNIT", count=unit_ct)
 
   if unit_ct eq 0 then begin
@@ -95,10 +97,9 @@ function sfng_check_header, hdr = hdr $
         comments = [comments, "Units are "+unit_str]
      end else begin
         comments = [comments, "Units are "+unit_str]
-        bunit=units
      end
-
   end 
+  unit=unit_str
   
 ; &%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%
 ; BEAM
