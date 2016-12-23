@@ -7,7 +7,7 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
                       ,expand_mask_edges=expand_mask_edges $
                       ,jy2k=jy2k, rebaseline=rebaseline $
                       ,xygrid=xygrid,vgrid=vgrid $
-                      ,help=help,verbose=verbose,noreport=noreport 
+                      ,help=help,verbose=verbose,noreport=noreport,nostop=nostop 
 
 ;+ NAME:
 ;     sfng_cube_compare
@@ -62,7 +62,9 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
 ;     help = print this help
 ;     verbose = print extra information to screen
 ;     noreport = don't generate a PDF file, just make the plots
-;                and IDL save structure of results  
+;                and IDL save structure of results
+;     nostop = exit the routine when finished. If not set, execution
+;              will pause just before return statement at end of routine.
 ; EXAMPLES
 ;     sfng_cube_compare,
 ;
@@ -306,7 +308,7 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
 
    c1_comments=[c1_comments,'Regridded and brought to matching resolution']
    c1_comments=[c1_comments,'Pixscale is now [as]: '+strtrim(string(abs(match_cdelt1)*3600.),2)]
-   c1_comments=[c1_comments,'Channel width is now [km/s]: '+strtrim(string(match_cdelt3),2)]
+   c1_comments=[c1_comments,'Channel width is now [k/s]: '+strtrim(string(match_cdelt3),2)]
    c1_comments=[c1_comments,'Resolution is now [as]: '+strtrim(string(abs(match_bmaj)*3600.),2)]
    c1_comments=[c1_comments,'Dimensions are now [x,y,v]: '+strtrim(string(nx),2)+','+strtrim(string(ny),2)+','+strtrim(string(nchans),2)]
    ccmp_str.c1_comments=strjoin(c1_comments,';')
@@ -663,15 +665,17 @@ end
   nbins=round(noisect_c1/1000.) < round(noisect_c2/1000.) 
   xlim=abs(nzmin_disp)>abs(nzmax_disp)
   xr=[-xlim,xlim]
+  !p.position=[0.2,0.2,0.8,0.8]
 
     
 ;======================
 ; CUBE 1
 ;======================
 
-  c1_noisestats_nosignal=sfng_get_basic_stats(c1[c1nosigidx],/nan)
-
-  hhcube=histogram(c1[c1nosigidx],max=nzmax,min=nzmin,locations=nzbins,nbins=nbins)
+;  c1_noisestats_nosignal=sfng_get_basic_stats(c1[c1nosigidx],/nan)
+;  hhcube=histogram(c1[c1nosigidx],max=nzmax,min=nzmin,locations=nzbins,nbins=nbins)
+  c1_noisestats_nosignal=sfng_get_basic_stats(c1[nosigidx],/nan)
+  hhcube=histogram(c1[nosigidx],max=nzmax,min=nzmin,locations=nzbins,nbins=nbins)
 
   use_pngfile='c1_noisehisto.png'
 
@@ -710,9 +714,10 @@ end
 ; CUBE 2
 ;======================
 
-  c2_noisestats_nosignal=sfng_get_basic_stats(c2[c2nosigidx],/nan)
-
-  hhcube=histogram(c2[c2nosigidx],max=nzmax,min=nzmin,locations=nzbins,nbins=nbins)
+;  c2_noisestats_nosignal=sfng_get_basic_stats(c2[c2nosigidx],/nan)
+;  hhcube=histogram(c2[c2nosigidx],max=nzmax,min=nzmin,locations=nzbins,nbins=nbins)
+  c2_noisestats_nosignal=sfng_get_basic_stats(c2[nosigidx],/nan)
+  hhcube=histogram(c2[nosigidx],max=nzmax,min=nzmin,locations=nzbins,nbins=nbins)
 
     use_pngfile='c2_noisehisto.png'
 
@@ -792,6 +797,8 @@ end
 ; SAVE NOISE STATISTICS
 ;======================
 
+  ccmp_str.c1_noisestats=c1_noisestats
+  ccmp_str.c2_noisestats=c2_noisestats
   ccmp_str.c1_noisestats_nosignal=c1_noisestats_nosignal
   ccmp_str.c2_noisestats_nosignal=c2_noisestats_nosignal
   ccmp_str.diffcube_stats=diffcube_stats
@@ -1095,6 +1102,7 @@ end
 ; generate correlation plots
 ;======================
 
+  
 ;======================
 ; Linear Cube 1 vs Cube 2
 ;======================
@@ -1105,10 +1113,11 @@ end
   xaxis=plotmax*findgen(100)/100.
   yfit=xaxis*res_linc1c2[0]+res_linc1c2[1]
   
+  !p.position=[0.2,0.2,0.8,0.8]
   window,use_win,xsize=600,ysize=600 & use_win=use_win+1
   xr=[-0.05,plotmax] & yr=[-0.05,plotmax]
 
-  cgplot,c1[jsigidx],c2[jsigidx],xtit=use_c1str,ytit=use_c2str,tit='Pixel-pixel correlation inside common mask', $
+  cgplot,c1[jsigidx],c2[jsigidx],xtit=use_c1str+' [K]',ytit=use_c2str+' [K]',tit='Pixel-pixel correlation inside common mask', $
        charsize=1.5,/nodata,/xsty,/ysty,xr=xr,yr=yr,xthick=2,ythick=2,thick=2,charthick=1.8
   cgplot,c1[jsigidx],c2[jsigidx],psym=3,color=fsc_color('dark grey'),/overplot,thick=2
   cgplot,xaxis,yfit,color=fsc_color('blue'),lines=2,/overplot,thick=3
@@ -1142,7 +1151,7 @@ end
 
 
 ;================
-; generate density plot
+; generate density plot -- linear axes, c1 (x) vs c2 (y)
 ;================
 
   use_pngfile='lindens_c1c2.png'
@@ -1154,15 +1163,18 @@ end
    maxDensity = Ceil(Max(density)/1e2) * 1e2
    scaledDensity = BytScl(density, Min=0, Max=maxDensity)
                            
-   window,use_win,xsize=400,ysize=400 & use_win=use_win+1
+   window,use_win,xsize=600,ysize=600 & use_win=use_win+1
    loadct,20,rgb_table=palette
    TVLCT, cgColor('gray', /Triple), 0
+   use_tit='Pixel values inside common mask'
    
    cgImage, scaledDensity, XRange=xr, YRange=yr, /Axes, Palette=palette, $
-      XTitle=use_c1str, YTitle=use_c2str, $
-      Position=[0.125, 0.125, 0.825, 0.825]
-      
-   cgColorbar, position=[0.85,0.125,0.88,0.825]  $
+      XTitle=use_c1str+' [K]', YTitle=use_c2str+' [K]', Title=use_tit, $
+      Position=[0.2,0.2,0.8,0.8]
+
+     equality,color=fsc_color('black'),thick=2
+
+   cgColorbar, position=[0.825,0.2,0.85,0.8]  $
                , Title='Npixels', /vertical, /right $
                ,Range=[0, maxDensity], NColors=254, Bottom=1,Palette=palette $
                ,charsize=1.1,tcharsize=1.1
@@ -1180,10 +1192,11 @@ end
   xaxis=plotmax*findgen(100)/100.
   yfit=xaxis*res_linc2c1[0]+res_linc2c1[1]
   
+  !p.position=[0.2,0.2,0.8,0.8]
   window,use_win,xsize=600,ysize=600 & use_win=use_win+1
   xr=[-0.05,plotmax] & yr=[-0.05,plotmax]
 
-  cgplot,c2[jsigidx],c1[jsigidx],xtit=use_c2str,ytit=use_c1str,tit='Pixel-pixel correlation inside common mask', $
+  cgplot,c2[jsigidx],c1[jsigidx],xtit=use_c2str+' [K]',ytit=use_c1str+' [K]',tit='Pixel-pixel correlation inside common mask', $
        charsize=1.5,/nodata,/xsty,/ysty,xr=xr,yr=yr,xthick=2,ythick=2,thick=2,charthick=1.8
   cgplot,c2[jsigidx],c1[jsigidx],psym=3,color=fsc_color('dark grey'),/overplot,thick=2
   cgplot,xaxis,yfit,color=fsc_color('blue'),lines=2,/overplot,thick=3
@@ -1216,7 +1229,7 @@ end
   write_png,use_plotdir+use_pngfile,TVRD(/TRUE)
 
 ;================
-; generate density plot
+; generate density plot - linear axes, c2 (x) vs c1 (y)
 ;================
 
   use_pngfile=+'lindens_c2c1.png'
@@ -1228,15 +1241,18 @@ end
   maxDensity = Ceil(Max(density)/1e2) * 1e2
   scaledDensity = BytScl(density, Min=0, Max=maxDensity)
                            
-  window,use_win,xsize=400,ysize=400 & use_win=use_win+1
+  window,use_win,xsize=600,ysize=600 & use_win=use_win+1
   loadct,20,rgb_table=palette
   TVLCT, cgColor('gray', /Triple), 0
-  
+  use_tit='Pixel values inside common mask'
+     
   cgImage, scaledDensity, XRange=xr, YRange=yr, /Axes, Palette=palette, $
-           XTitle=use_c1str, YTitle=use_c2str, $
-           Position=[0.125, 0.125, 0.825, 0.825]
-  
-  cgColorbar, position=[0.85,0.125,0.88,0.825]  $
+           XTitle=use_c1str+' [K]', YTitle=use_c2str+' [K]', Title=use_tit,$
+           Position=[0.2,0.2,0.8,0.8]
+
+    equality,color=fsc_color('black'),thick=2
+
+  cgColorbar, position=[0.825,0.2,0.85,0.8]  $
               , Title='Npixels', /vertical, /right $
               ,Range=[0, maxDensity], NColors=254, Bottom=1,Palette=palette $
               ,charsize=1.1,tcharsize=1.1
@@ -1255,10 +1271,11 @@ end
   plotmax=1.25*(max(c1[jsigidx],/nan)>max(c2[jsigidx],/nan))
   plotmin=0.75*(min(c1[jsigidx],/nan)<min(c2[jsigidx],/nan))
   
-  window,use_win,xsize=600,ysize=600 & use_win=use_win+1
+   !p.position=[0.2,0.2,0.8,0.8]
+ window,use_win,xsize=600,ysize=600 & use_win=use_win+1
   xr=[plotmin,plotmax] & yr=[plotmin,plotmax]
 
-  cgplot,c1[jsigidx],c2[jsigidx],xtit=use_c1str,ytit=use_c2str,tit='Pixel-pixel correlation inside common mask', $
+  cgplot,c1[jsigidx],c2[jsigidx],xtit=use_c1str+' [K]',ytit=use_c2str+' [K]',tit='Pixel-pixel correlation inside common mask', $
        charsize=1.5,/nodata,/xsty,/ysty,xr=xr,yr=yr,xthick=2,ythick=2,thick=2,charthick=1.8,/xlo,/ylo
   cgplot,c1[jsigidx],c2[jsigidx],psym=3,color=fsc_color('dark grey'),/overplot,thick=2
   equality,color=fsc_color('black'),thick=2
@@ -1291,7 +1308,7 @@ end
 
 
 ;================
-; generate density plot
+; generate density plot - logarithmic axes, c1 (x) vs c2 (y)
 ;================
 
   use_pngfile='logdens_c1c2.png'
@@ -1304,15 +1321,18 @@ end
   maxDensity = Ceil(Max(density)/1e2) * 1e2
   scaledDensity = BytScl(density, Min=0, Max=maxDensity)
                            
-  window,use_win,xsize=400,ysize=400 & use_win=use_win+1
+  window,use_win,xsize=600,ysize=600 & use_win=use_win+1
   loadct,20,rgb_table=palette
   TVLCT, cgColor('gray', /Triple), 0
-  
+     use_tit='Pixel values inside common mask'
+
   cgImage, scaledDensity, XRange=alog10(xr), YRange=alog10(yr), /Axes, Palette=palette, $
-           XTitle=use_c1str, YTitle=use_c2str, $
-           Position=[0.125, 0.125, 0.825, 0.825]
-  
-  cgColorbar, position=[0.85,0.125,0.88,0.825]  $
+           XTitle=use_c1str+' [log K]', YTitle=use_c2str+' [log K]', Title=use_tit,$
+           Position=[0.2,0.2,0.8,0.8]
+
+  equality,color=fsc_color('black'),thick=2
+    
+  cgColorbar, position=[0.825,0.2,0.85,0.8]  $
               , Title='Npixels', /vertical, /right $
               ,Range=[0, maxDensity], NColors=254, Bottom=1,Palette=palette $
               ,charsize=1.1,tcharsize=1.1
@@ -1329,10 +1349,11 @@ end
   plotmax=1.25*(max(c1[jsigidx],/nan)>max(c2[jsigidx],/nan))
   plotmin=0.75*(min(c1[jsigidx],/nan)<min(c2[jsigidx],/nan))
   
+  !p.position=[0.2,0.2,0.8,0.8]
   window,use_win,xsize=600,ysize=600 & use_win=use_win+1
   xr=[plotmin,plotmax] & yr=[plotmin,plotmax]
 
-  cgplot,c2[jsigidx],c1[jsigidx],xtit=use_c2str,ytit=use_c1str,tit='Pixel-pixel correlation inside common mask', $
+  cgplot,c2[jsigidx],c1[jsigidx],xtit=use_c2str+' [K]',ytit=use_c1str+' [K]',tit='Pixel-pixel correlation inside common mask', $
        charsize=1.5,/nodata,/xsty,/ysty,xr=xr,yr=yr,xthick=2,ythick=2,thick=2,charthick=1.8,/xlo,/ylo
   cgplot,c2[jsigidx],c1[jsigidx],psym=3,color=fsc_color('dark grey'),/overplot,thick=2
   equality,color=fsc_color('black'),thick=2
@@ -1365,7 +1386,7 @@ end
 
     
 ;================
-; generate density plot
+; generate density plot - logarithmic axes, c2 (x) vs c1 (y)
 ;================
 
   use_pngfile='logdens_c2c1.png'
@@ -1378,22 +1399,23 @@ end
   maxDensity = Ceil(Max(density)/1e2) * 1e2
   scaledDensity = BytScl(density, Min=0, Max=maxDensity)
                            
-  window,use_win,xsize=400,ysize=400 & use_win=use_win+1
+  window,use_win,xsize=600,ysize=600 & use_win=use_win+1
   loadct,20,rgb_table=palette
   TVLCT, cgColor('gray', /Triple), 0
-  
+  use_tit='Pixel values inside common mask'
+
   cgImage, scaledDensity, XRange=alog10(xr), YRange=alog10(yr), /Axes, Palette=palette, $
-           XTitle=use_c2str, YTitle=use_c1str, $
-           Position=[0.125, 0.125, 0.825, 0.825]
-  
-  cgColorbar, position=[0.85,0.125,0.88,0.825]  $
+           XTitle=use_c2str+' [log K]', YTitle=use_c1str+' [log K]', Title=use_tit,$
+           Position=[0.2,0.2,0.8,0.8]
+
+  equality,color=fsc_color('black'),thick=2
+
+  cgColorbar, position=[0.825,0.2,0.85,0.8]  $
               , Title='Npixels', /vertical, /right $
               ,Range=[0, maxDensity], NColors=254, Bottom=1,Palette=palette $
               ,charsize=1.1,tcharsize=1.1
 
   write_png,use_plotdir+use_pngfile,TVRD(/TRUE)
-
-
 
 
   
@@ -1404,8 +1426,7 @@ save_structure:
 
    save,file=use_savedir+savefile,ccmp_str
 
-   
-produce_report:
+   produce_report:
 ;================
 ;
 ;================
@@ -1415,9 +1436,9 @@ produce_report:
       sfng_compile_latex,ccmp_str
    end
 
-   stop
-   stop
-   
+   if keyword_set(verbose) then message,'Finished sfng_cube_compare.pro for '+use_c1file+' and '+use_c2file,/info
+   if not keyword_set(nostop) then stop
+
   the_end:
   return
   

@@ -69,18 +69,37 @@ PRO sfng_make_latex_elements,cube_cmp_str $
   use_c1str=repstr(cube_cmp_str.c1_file,'_','\_')
   use_c2str=repstr(cube_cmp_str.c2_file,'_','\_')
   
-;    logs_only:
+    logs_only:
 ;================
 ;== Make the input .tex file containing the processing logs
 ;================
-;  if keyword_set(logs_only) then goto, the_end
+
+  file_out=use_reportdir+'processing_logs.tex'
+  openw,unit,file_out,/get_lun
+  hdr_lines=['%This Latex text was generated automatically by sfng_make_latex_elements.pro on'+systime(), '%-----',' ']
+  c1_startstr='\noindent Processing log for '+use_c1str
+  c1_logstr=repstr('\noindent '+cube_cmp_str.c1_comments,'_','\_')
+  c1_logstr_exp=[' ',strsplit(c1_logstr,';',/extract)+'\\',' ','%-----','%-----']
+
+  c2_startstr='\noindent  Processing log for '+use_c2str
+  c2_logstr=repstr('\noindent '+cube_cmp_str.c2_comments,'_','\_')
+  c2_logstr_exp=[' ',strsplit(c2_logstr,';',/extract)+'\\',' ','%-----','%-----']
+
+  proclog_lines=[hdr_lines,c1_startstr,c1_logstr_exp,c2_startstr,c2_logstr_exp]
+
+  Nlines=n_elements(proclog_lines)
+  FOR i=0L,Nlines-1 DO printf,unit,proclog_lines[i]
+  close,unit
+  free_lun,unit
+
+  if keyword_set(logs_only) then goto, the_end
   
   tables_only:
 ;================
 ;== Make the input cube table
 ;================
 
-  one_st={file:'',pixscale:nan,chanw:nan,bmaj:nan,bmin:nan,bpa:nan,bunit:'',nx:nan,ny:nan,nv:nan}
+  one_st={file:'',pixscale:nan,chanw:nan,bmaj:nan,bmin:nan,bpa:nan,bunit:'',nx:0,ny:0,nv:0}
   st=replicate(one_st,2)
 
   st[0].file=cube_cmp_str.c1_file
@@ -108,11 +127,11 @@ PRO sfng_make_latex_elements,cube_cmp_str $
   caption='Basic parameters of input cubes.'
   label='tab:input_cubes'
 
-  frmt='(A40, " & ",F10.3, " & ",F10.2, " & ",F10.2, " & ",F10.2, " & ",F10.2, " & ", A10, " & ", I5.5, " & ",I5.5, " & ",I5.5," \\")'
+  frmt='(A40, " & ",F0.2, " & ",F0.2, " & ",F0.2, " & ",F0.2, " & ",F0.2, " & ", A10, " & ", I0, " & ",I0, " & ",I0," \\")'
   units=['','[as]','[km/s]', '[as]','[as]','[deg]' , '', '' , '', ''] ; order is order of tags in the structure, not replace arrays
   tiny=0 & small=1 & landscape=1
 
-  struct2latex_table,st,fileout,use_all_format=frmt, $
+  struct2latex_table,st,fileout,use_all_format=frmt, /force, $
                      /silent,caption=caption,label=label,units=units,tiny=tiny,small=small,landscape=landscape
 
   message,'Wrote '+fileout,/info
@@ -121,7 +140,7 @@ PRO sfng_make_latex_elements,cube_cmp_str $
 ;== Make the matched cube table
 ;================
 
-  one_st={angres:0,chanwidth:0,pixscale:0,nx:0,ny:0,nv:0}
+  one_st={angres:nan,chanwidth:nan,pixscale:nan,nx:0,ny:0,nv:0}
   st=replicate(one_st,1)
   
   st[0].angres=cube_cmp_str.angres_as
@@ -135,11 +154,11 @@ PRO sfng_make_latex_elements,cube_cmp_str $
   caption='Parameters of matched cubes.'
   label='tab:matched_cubes'
 
-  frmt='(F10.3, " & ",F10.2, " & ",F10.2, " & ",I5.5, " & ",I5.5, " & ",I5.5," \\")'
+  frmt='(F0.2, " & ",F0.2, " & ",F0.2, " & ",I0, " & ",I0, " & ",I0," \\")'
   units=['\relax [as]','[km/s]', '[as]', '' , '', ''] ; order is order of tags in the structure, not replace arrays
-  tiny=0 & small=1 & landscape=1
+  tiny=0 & small=1 & landscape=0
 
-  struct2latex_table,st,fileout,use_all_format=frmt, $
+  struct2latex_table,st,fileout,use_all_format=frmt, /force, $
                      /silent,caption=caption,label=label,units=units,tiny=tiny,small=small,landscape=landscape
 
   message,'Wrote '+fileout,/info
@@ -149,7 +168,7 @@ PRO sfng_make_latex_elements,cube_cmp_str $
 ;== Make the flux statistics table
 ;================
 
-  one_st={file:'',total_flux:0,total_flux_jointmask:0}
+  one_st={file:'',total_flux:nan,total_flux_jointmask:nan}
   st=replicate(one_st,3)
   label='tab:total_flux'
 
@@ -166,11 +185,11 @@ PRO sfng_make_latex_elements,cube_cmp_str $
   fileout=use_reportdir+'flux_table.tex'
   caption='Total Flux Statistics'
 
-  frmt='(A40, " & ",E10.3, " & ",E10.2, " \\")'
+  frmt='(A40, " & ",E0.3, " & ",E0.3, " \\")'
   units=['', '[K.km/s.pix]' , '[K.km/s.pix]'] ; order is order of tags in the structure, not replace arrays
-  tiny=0 & small=1 & landscape=1
+  tiny=0 & small=1 & landscape=0
 
-  struct2latex_table,st,fileout,use_all_format=frmt, $
+  struct2latex_table,st,fileout,use_all_format=frmt, /force, $
                      /silent,caption=caption,label=label,units=units,tiny=tiny,small=small,landscape=landscape
 
   message,'Wrote '+fileout,/info
@@ -179,7 +198,7 @@ PRO sfng_make_latex_elements,cube_cmp_str $
 ;== Make the noise statistics table
 ;================
 
-  one_st={file:'',rms_cube:0,rms_nosignal:0}
+  one_st={file:'',rms_cube:nan,rms_nosignal:nan}
   st=replicate(one_st,3)
 
   st[0].file=cube_cmp_str.c1_file
@@ -197,11 +216,11 @@ PRO sfng_make_latex_elements,cube_cmp_str $
   caption='Noise Statistics'
   label='tab:noise_statistics'
 
-  frmt='(A40, " & ",E10.3, " & ",E10.2, " \\")'
+  frmt='(A40, " & ",E0.3, " & ",E0.3, " \\")'
   units=['', '[K]' , '[K]'] ; order is order of tags in the structure, not replace arrays
-  tiny=0 & small=1 & landscape=1
+  tiny=0 & small=1 & landscape=0
 
-  struct2latex_table,st,fileout,use_all_format=frmt, $
+  struct2latex_table,st,fileout,use_all_format=frmt, /force, $
                      /silent,caption=caption,label=label,units=units,tiny=tiny,small=small,landscape=landscape
 
   message,'Wrote '+fileout,/info
@@ -210,7 +229,7 @@ PRO sfng_make_latex_elements,cube_cmp_str $
 ;== Make the correlation metrics table
 ;================
 
-  one_st={rpx:0, rank:0, slope_yonx:0, slope_xony:0}
+  one_st={rpx:nan, rank:nan, slope_yonx:nan, slope_xony:nan}
   st=replicate(one_st,1)
 
   st[0].rpx=cube_cmp_str.rpx_c1c2
@@ -222,11 +241,11 @@ PRO sfng_make_latex_elements,cube_cmp_str $
   caption='Correlation Metrics'
   label='tab:correlation_metrics'
 
-  frmt='(F10.2, " & ",F10.2, " & ",F10.2, " & ", F10.2,  " \\")'
+  frmt='(F0.2, " & ",F0.2, " & ",F0.2, " & ", F0.2,  " \\")'
   units=['', '' , '', ''] ; order is order of tags in the structure, not replace arrays
-  tiny=0 & small=1 & landscape=1
+  tiny=0 & small=1 & landscape=0
 
-  struct2latex_table,st,fileout,use_all_format=frmt, $
+  struct2latex_table,st,fileout,use_all_format=frmt, /force, $
                      /silent,caption=caption,label=label,units=units,tiny=tiny,small=small,landscape=landscape
 
   message,'Wrote '+fileout,/info
@@ -239,16 +258,19 @@ figures_only:
 ;== Make the flux per channel figure
 ;================
  
+
+; settings for 'spectra' type figures
+  
   newpage=0
   dimension_type='width'
-  dimension_value=14            ;cm
+  dimension_value=16            ;cm
   dimension_unit='cm'
   angle=0.
-  centering=1
+  centering=0
   
   ; flux per channel
   file='flux_per_channel.png'
-  caption='Flux per channel: Matched cubes'
+  caption='Flux per channel: matched cubes'
   label='fig:flux_per_chan'
   tex_file_name=use_reportdir+'flux_perchannel_fig.tex'
   fig_st=make_latex_fig_structure(position=position,double_column=double_column,centering=centering, $
@@ -263,7 +285,7 @@ figures_only:
   
   ; flux per channel in joint signal mask
   file='flux_per_channel_jointsignalmask.png'
-  caption='Flux per channel in joint signal mask'
+  caption='Flux per channel: matched cubes in region where significant emission identified in both cubes'
   label='fig:flux_per_chan_jsm'
   tex_file_name=use_reportdir+'flux_perchannel_jsm_fig.tex'
   fig_st=make_latex_fig_structure(position=position,double_column=double_column,centering=centering, $
@@ -294,7 +316,7 @@ figures_only:
 
   ; diffcube -- inside joint signal mask
   file='diffcube_flux_per_channel_jointsignalmask.png'
-  caption='Flux per channel in difference cube inside joint signal mask'
+  caption='Flux per channel in difference cube inside the region where signal is identified in both cubes'
   label='fig:diffcube_flux_per_chan_jsm'
   tex_file_name=use_reportdir+'diffcube_flux_perchannel_jsm_fig.tex'
   fig_st=make_latex_fig_structure(position=position,double_column=double_column,centering=centering, $
@@ -312,15 +334,9 @@ figures_only:
 ;== Make the rms per channel figures
 ;================
  
-  newpage=0
-  dimension_type='width'
-  dimension_value=16            ;cm
-  dimension_unit='cm'
-  angle=0.
-
   ; rms per channel
   file='rms_per_channel.png'
-  caption='RMS per channel: Matched cubes'
+  caption='RMS per channel: matched cubes, all pixels'
   label='fig:rms_per_chan'
   tex_file_name=use_reportdir+'rms_perchannel_fig.tex'
   fig_st=make_latex_fig_structure(position=position,double_column=double_column,centering=centering, $
@@ -336,7 +352,7 @@ figures_only:
   
   ; rms per channel in joint no signal mask
   file='rms_per_channel_nosignalmask.png'
-  caption='RMS per channel, measured within joint no signal mask'
+  caption='RMS per channel, measured where there is no signal identified in either cube'
   label='fig:rms_per_chan_nosm'
   tex_file_name=use_reportdir+'rms_perchannel_nosm_fig.tex'
   fig_st=make_latex_fig_structure(position=position,double_column=double_column,centering=centering, $
@@ -354,10 +370,20 @@ figures_only:
 ;================
 ;== Make the noise histogram figures
 ;================
-    
+
+; settings for 'square' figures -- noise histos, correlation plots
+  
+  newpage=0
+  dimension_type='width'
+  dimension_value=12            ;cm
+  dimension_unit='cm'
+  angle=0.
+  centering=0
+
+  
   ; Noise histogram -- cube 1
   file='c1_noisehisto.png'
-  caption='Histogram of pixel values in signal-free channels: '+use_c1str
+  caption='Histogram of pixel values in joint signal-free region (i.e. signal free in both cubes): '+use_c1str
   label='fig:rms_per_chan_nosm'
   tex_file_name=use_reportdir+'c1_noisehisto_fig.tex'
   fig_st=make_latex_fig_structure(position=position,double_column=double_column,centering=centering, $
@@ -376,7 +402,7 @@ figures_only:
     
   ; Noise histogram -- cube 2
   file='c2_noisehisto.png'
-  caption='Histogram of pixel values in signal-free channels: '+use_c2str
+  caption='Histogram of pixel values in joint signal-free region: '+use_c2str
   label='fig:rms_per_chan_nosm'
   tex_file_name=use_reportdir+'c2_noisehisto_fig.tex'
   fig_st=make_latex_fig_structure(position=position,double_column=double_column,centering=centering, $
@@ -391,7 +417,7 @@ figures_only:
 
     ; Noise histogram -- diffcube
   file='diffcube_noisehisto.png'
-  caption='Histogram of pixel values in signal-free channels: Difference Cube'
+  caption='Histogram of pixel values in joint signal-free region: Difference Cube'
   label='fig:rms_per_chan_nosm'
   tex_file_name=use_reportdir+'diffcube_noisehisto_fig.tex'
   fig_st=make_latex_fig_structure(position=position,double_column=double_column,centering=centering, $

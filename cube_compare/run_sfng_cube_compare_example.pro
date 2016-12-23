@@ -14,7 +14,7 @@ pro run_sfng_cube_compare_example
                     ,reportdir=use_reportdir,savedir=use_savedir $
                     , fits_in1=use_c1file,fits_in2=use_c2file,savefile=use_savefile $
                     , xygrid=2,vgrid=1,jy2k=[0,1],rebaseline=[1,1],expand_mask_edges=[5,2] $
-                    , target_beam=[30.,30.,0]
+                    , target_beam=[30.,30.,0],/verb
   
   stop
   
