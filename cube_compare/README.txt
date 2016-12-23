@@ -23,7 +23,7 @@ PDF report, so you should be careful about over-writing what you've
 created***
 
 Still to add:
-* Jerome's fidelity statistic
+* table for Jerome's fidelity statistic
 * power spectra
-* channel maps
+* channel maps -- matched cubes, difference and fidelity cubes
 * description of emission masks in the report

@@ -69,6 +69,11 @@ function sfng_empty_cubecmp_str
               c2_noisestats_nosignal: stats_struct , $
               diffcube_stats: stats_struct , $
               diffcube_stats_nosignal: stats_struct , $
+              c1_fidel_stats: fltarr(4), $
+              c2_fidel_stats: fltarr(4), $
+              fidel_levs: fltarr(4), $
+              c1_fidelperchan_jointsignalmask: ptr_new() , $
+              c2_fidelperchan_jointsignalmask: ptr_new() , $
               rpx_c1c2: nan , $
               rank_c1c2: fltarr(2) , $
               lincorr_c1c2: fltarr(2) , $

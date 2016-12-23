@@ -60,7 +60,7 @@ PRO sfng_make_latex_elements,cube_cmp_str $
   
   IF keyword_set(figures_only) THEN goto,figures_only
   IF keyword_set(tables_only) THEN goto,tables_only
-;  IF keyword_set(logs_only) THEN goto,logs_only
+  IF keyword_set(logs_only) THEN goto,logs_only
 
 ;================
 ; Strip special characters from filenames to stop latex throwing an error
@@ -366,6 +366,22 @@ figures_only:
   message,'Wrote '+tex_file_name,/info
 
 
+  
+  ; Fidelity per channel in joint signal mask
+  file='fidelity_perchannel_jsm.png'
+  caption='Median fidelity value per channel in region where emission is identified in both cubes.' 
+  label='fig:fidelity_perchannel_jsm'
+  tex_file_name=use_reportdir+'fidelity_perchannel_jsm_fig.tex'
+  fig_st=make_latex_fig_structure(position=position,double_column=double_column,centering=centering, $
+                                    dimension_type=dimension_type,dimension_value=dimension_value,dimension_unit=dimension_unit, $
+                                    label=label,caption=caption,newpage=newpage,ps_file_names=file,_extra=_extra)
+  lst=latex_figst2figstr(fig_st,show=show)
+  openw,unit,tex_file_name,/get_lun
+  FOR i=0L,n_elements(lst)-1 DO printf,unit,lst(i)
+  close,unit
+  free_lun,unit
+  message,'Wrote '+tex_file_name,/info
+
 
 ;================
 ;== Make the noise histogram figures
@@ -430,6 +446,40 @@ figures_only:
   free_lun,unit
   message,'Wrote '+tex_file_name,/info
 
+;;================
+;== Make the fidelity figures
+;;================
+
+; Fidelity CDF -- Cube 1
+  file='fidelity_cube1_cdf.png'
+  caption='Fidelity values in region where emission is identified in both cubes : '+use_c1str+'. Vertical lines represent the median fidelity values for pixels above the thresholds indicated (see legend)'
+  label='fig:fidelity_cube1_cdf'
+  tex_file_name=use_reportdir+'fidelity_cube1_cdf_fig.tex'
+  fig_st=make_latex_fig_structure(position=position,double_column=double_column,centering=centering, $
+                                    dimension_type=dimension_type,dimension_value=dimension_value,dimension_unit=dimension_unit, $
+                                    label=label,caption=caption,newpage=newpage,ps_file_names=file,_extra=_extra)
+  lst=latex_figst2figstr(fig_st,show=show)
+  openw,unit,tex_file_name,/get_lun
+  FOR i=0L,n_elements(lst)-1 DO printf,unit,lst(i)
+  close,unit
+  free_lun,unit
+  message,'Wrote '+tex_file_name,/info
+
+  ; Fidelity CDF -- Cube 2
+  file='fidelity_cube2_cdf.png'
+  caption='Fidelity values in region where emission is identified in both cubes : '+use_c2str+'. Vertical lines represent the median fidelity values for pixels above the thresholds indicated (see legend)'
+  label='fig:fidelity_cube2_cdf'
+  tex_file_name=use_reportdir+'fidelity_cube2_cdf_fig.tex'
+  fig_st=make_latex_fig_structure(position=position,double_column=double_column,centering=centering, $
+                                    dimension_type=dimension_type,dimension_value=dimension_value,dimension_unit=dimension_unit, $
+                                    label=label,caption=caption,newpage=newpage,ps_file_names=file,_extra=_extra)
+  lst=latex_figst2figstr(fig_st,show=show)
+  openw,unit,tex_file_name,/get_lun
+  FOR i=0L,n_elements(lst)-1 DO printf,unit,lst(i)
+  close,unit
+  free_lun,unit
+  message,'Wrote '+tex_file_name,/info
+ 
 ;================
 ;== Make the correlation figures
 ;================

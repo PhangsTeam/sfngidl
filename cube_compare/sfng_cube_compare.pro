@@ -11,11 +11,9 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
 
 ;+ NAME:
 ;     sfng_cube_compare
-; CALLING SEQUENCE:
-;     sfng_cube_compare,
 ; PURPOSE:
 ;     compares two cubes. Essentially a wrapper to a library of routines that bring
-;     cubes to a matching grid and resolution, and calculate
+;     cubes to a matching grid, resolution, common field-of-view etc, and calculate
 ;     statistics about emission and emission-free regions in the cubes.
 ; INPUTS:
 ;     idl_in1/2 = IDL cube files for comparison
@@ -66,8 +64,11 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
 ;     nostop = exit the routine when finished. If not set, execution
 ;              will pause just before return statement at end of routine.
 ; EXAMPLES
-;     sfng_cube_compare,
-;
+;       sfng_cube_compare,datadir=use_datadir,outdir=use_outdir,plotdir=use_plotdir $
+;                    ,reportdir=use_reportdir,savedir=use_savedir $
+;                    , fits_in1=use_c1file,fits_in2=use_c2file,savefile=use_savefile $
+;                    , xygrid=2,vgrid=1,jy2k=[0,1],rebaseline=[1,1],expand_mask_edges=[5,2] $
+;                    , target_beam=[30.,30.,0],/verb
 ; OUTPUTS:
 ;     savefile = IDL save file with structure containing results of comparison
 ;     Plots (in plotdir) and, if requested, a summary report (in reportdir)
@@ -76,6 +77,7 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
 ;     Freudenreich Robust routines (contrib to IDLAstro, not provided)
 ;     AKL CPROPTOO library (not provided)
 ;     AKL GAL_BASE library (not provided)
+;     Coyote Graphics (not provided)
 ;     JPBlib: (provided in aux/ subdirectory)
 ;             enlarge.pro, read_xcat.pro, write_xcat.pro,
 ;             linear_mpfit.pro, linear4mpfit.pro 
@@ -694,7 +696,7 @@ end
   binCenters = nzbins + (binsize/2.0)
   fitbins=where((hhcube/total(hhcube)) gt fitlim,fct)
   yfit = GaussFit(binCenters[fitbins],hhcube[fitbins]/float(total(hhcube,/nan)), coeffs, NTERMS=3)
-  cgplot,binCenters[fitbins],yfit,color=fsc_color('red'),/overplot,thick=2
+  cgplot,binCenters[fitbins],yfit,color=cgcolor('red'),/overplot,thick=2
 
   al_legend, /top,/left, box=0,clear=0 $
                 ,[use_c1str, $
@@ -736,7 +738,7 @@ end
   binCenters = nzbins + (binsize/2.0)
   fitbins=where((hhcube/total(hhcube)) gt fitlim,fct)
   yfit = GaussFit(binCenters[fitbins],hhcube[fitbins]/float(total(hhcube,/nan)), coeffs, NTERMS=3)
-  cgplot,binCenters[fitbins],yfit,color=fsc_color('red'),/overplot,thick=2
+  cgplot,binCenters[fitbins],yfit,color=cgcolor('red'),/overplot,thick=2
 
   al_legend, /top,/left, box=0,clear=0 $
                 ,[use_c2str, $
@@ -777,7 +779,7 @@ end
   binCenters = nzbins + (binsize/2.0)
   fitbins=where((hhcube/total(hhcube)) gt fitlim,fct)
   yfit = GaussFit(binCenters[fitbins],hhcube[fitbins]/float(total(hhcube,/nan)), coeffs, NTERMS=3)
-  cgplot,binCenters[fitbins],yfit,color=fsc_color('red'),/overplot,thick=2
+  cgplot,binCenters[fitbins],yfit,color=cgcolor('red'),/overplot,thick=2
 
   al_legend, /top,/left, box=0,clear=0 $
                 ,['Difference Cube', $
@@ -804,8 +806,99 @@ end
   ccmp_str.diffcube_stats=diffcube_stats
   ccmp_str.diffcube_stats_nosignal=diffcube_stats_nosignal
 
+
 ;======================
-; STATISTICS RE FLUX PER CHANNEL
+; OVERALL FIDELITY CUBE
+;======================
+
+  use_fidel_levs=[5,10,25,50] ; % of image peak
+  fidel_medians_c1=fltarr(4)
+  fidel_medians_c2=fltarr(4)
+  fidel_rmsfactor=0.7*diffcube_stats.rms
+  fidelcube_c1=abs(c1)/(abs(diffcube) > fidel_rmsfactor)
+  fidelcube_c2=abs(c2)/(abs(diffcube) > fidel_rmsfactor)
+
+  
+  use_fidelidx_c1=where(finite(fidelcube_c1) and joint_sigmask eq 1,fct1)
+  if fct1 gt 0 then fidel_vec_c1 = fidelcube_c1[use_fidelidx_c1]
+  fidel_vec_c1=fidel_vec_c1[sort(fidel_vec_c1)]
+  nfidelpix_c1=lindgen(fct1)+1
+  fidel_levs_c1=(use_fidel_levs/100.)*max(c1[jsigidx],/nan)
+
+  for i=0,3 do begin
+     fidel_median_c1_idx=where(finite(fidelcube_c1) and finite(c1) and c1 gt fidel_levs_c1[i] and joint_sigmask eq 1,mct)
+     if mct gt 0 then fidel_medians_c1[i]=median(fidelcube_c1[fidel_median_c1_idx])
+  end
+
+  
+  use_fidelidx_c2=where(finite(fidelcube_c2) and joint_sigmask eq 1,fct2)
+  if fct2 gt 0 then fidel_vec_c2 = fidelcube_c2[use_fidelidx_c2]
+  fidel_vec_c2=fidel_vec_c2[sort(fidel_vec_c2)]
+  nfidelpix_c2=lindgen(fct2)+1
+  fidel_levs_c2=(use_fidel_levs/100.)*max(c2[jsigidx],/nan)
+  
+  for i=0,3 do begin
+     fidel_median_c2_idx=where(finite(fidelcube_c2) and finite(c2) and c2 gt fidel_levs_c2[i] and joint_sigmask eq 1,mct)
+     if mct gt 0 then fidel_medians_c2[i]=median(fidelcube_c2[fidel_median_c2_idx])
+  end
+
+  
+  use_pngfile='fidelity_cube1_cdf.png'
+  yr=[1,fct1>fct2] & xr=[(min(fidel_vec_c1)<min(fidel_vec_c2)),(max(fidel_vec_c1)>max(fidel_vec_c2))]
+  !p.position=[0.2,0.2,0.8,0.8]
+  
+  window,use_win,xsize=600,ysize=600 & use_win=use_win+1
+  tit='Fidelity CDF inside common mask'
+  cgplot,fidel_vec_c1,reverse(nfidelpix_c1),/ysty,/xsty,/ylo $
+         ,/nodata,xr=xr,yr=yr,xtit='Fidelity Value',ytit='Npix(F>F*)',tit=tit $
+         ,xthick=2,ythick=2,thick=2,charsize=1.8,charthick=1.7
+  cgplot,fidel_vec_c1,reverse(nfidelpix_c1),psym=10,/overplot,thick=2
+  cgplot,[fidel_medians_c1[0],fidel_medians_c1[0]],yr,lines=0,thick=2,color=cgcolor('green'),/overplot
+  cgplot,[fidel_medians_c1[1],fidel_medians_c1[1]],yr,lines=0,thick=2,color=cgcolor('red'),/overplot
+  cgplot,[fidel_medians_c1[2],fidel_medians_c1[2]],yr,lines=0,thick=2,color=cgcolor('blue'),/overplot
+  cgplot,[fidel_medians_c1[3],fidel_medians_c1[3]],yr,lines=0,thick=2,color=cgcolor('black'),/overplot
+
+  al_legend,/top,/right,clear=0, box=0 $
+            , [use_c1str+', median fidelity:','pix > '+strtrim(string(use_fidel_levs),2)+'% of pk: '+sigfig(fidel_medians_c1,3)] $
+            ,lines=[-99,0,0,0,0] $
+            ,colors=[cgcolor('black'),cgcolor('green'),cgcolor('red'),cgcolor('blue'),cgcolor('black')] $
+            ,charsize=1.,thick=2,charthick=1.8
+
+  write_png,use_plotdir+use_pngfile,TVRD(/TRUE)
+
+  use_pngfile='fidelity_cube2_cdf.png'
+
+  window,use_win,xsize=600,ysize=600 & use_win=use_win+1
+  tit='Fidelity CDF inside common mask'
+  cgplot,fidel_vec_c2,reverse(nfidelpix_c2),/ysty,/xsty,/ylo $
+         ,/nodata,xr=xr,yr=yr,xtit='Fidelity Value',ytit='Npix(F>F*)',tit=tit $
+         ,xthick=2,ythick=2,thick=2,charsize=1.8,charthick=1.7
+  cgplot,fidel_vec_c2,reverse(nfidelpix_c2),psym=10,/overplot,thick=2
+  cgplot,[fidel_medians_c2[0],fidel_medians_c2[0]],yr,lines=0,thick=2,color=cgcolor('green'),/overplot
+  cgplot,[fidel_medians_c2[1],fidel_medians_c2[1]],yr,lines=0,thick=2,color=cgcolor('red'),/overplot
+  cgplot,[fidel_medians_c2[2],fidel_medians_c2[2]],yr,lines=0,thick=2,color=cgcolor('blue'),/overplot
+  cgplot,[fidel_medians_c2[3],fidel_medians_c2[3]],yr,lines=0,thick=2,color=cgcolor('black'),/overplot
+
+  al_legend,/top,/right,clear=0, box=0 $
+            , [use_c2str+', median fidelity:','pix > '+strtrim(string(use_fidel_levs),2)+'% of pk: '+sigfig(fidel_medians_c2,3)] $
+            ,lines=[-99,0,0,0,0] $
+            ,colors=[cgcolor('black'),cgcolor('green'),cgcolor('red'),cgcolor('blue'),cgcolor('black')] $
+            ,charsize=1.,thick=2,charthick=1.8
+
+  write_png,use_plotdir+use_pngfile,TVRD(/TRUE)
+
+
+;======================
+; SAVE OVERALL FIDELITY STATISTICS
+;======================
+
+  ccmp_str.c1_fidel_stats=fidel_medians_c1
+  ccmp_str.c2_fidel_stats=fidel_medians_c2
+  ccmp_str.fidel_levs=use_fidel_levs
+  
+  
+;======================
+; STATISTICS RE FLUX, FIDELITY, RMS PER CHANNEL
 ;======================
 
   c1_chanflux=fltarr(nchans)
@@ -821,13 +914,17 @@ end
   c2_chanrms=fltarr(nchans)
   c1_chanrms_nosm=fltarr(nchans)
   c2_chanrms_nosm=fltarr(nchans)
-
+  c1_chanfidel_jsm=fltarr(nchans)
+  c2_chanfidel_jsm=fltarr(nchans)
+  
   for i=0,nchans-1 do begin
 
      c1_thisplane=c1[*,*,i]
      c1_noise_thisplane=c1noise[*,*,i]
      c2_thisplane=c2[*,*,i]
      c2_noise_thisplane=c2noise[*,*,i]
+     c1_fidel_thisplane=fidelcube_c1[*,*,i]
+     c2_fidel_thisplane=fidelcube_c2[*,*,i]
      jsm_thisplane=joint_sigmask[*,*,i]
      nosm_thisplane=no_sigmask[*,*,i]
      fov_thisplane=common_fov_mask[*,*,i]
@@ -845,6 +942,8 @@ end
      if c2ct gt 0 then c2_chanflux_jsm[i]=total(c2_thisplane[c2_thisplane_jsm_idx],/nan)
      if nc1ct gt 0 then c1_chanflux_nosm[i]=total(c1_thisplane[c1_thisplane_nosm_idx],/nan)
      if nc2ct gt 0 then c2_chanflux_nosm[i]=total(c2_thisplane[c2_thisplane_nosm_idx],/nan)
+     if c1ct gt 0 then c1_chanfidel_jsm[i]=median(c1_fidel_thisplane[c1_thisplane_jsm_idx])
+     if c2ct gt 0 then c2_chanfidel_jsm[i]=median(c2_fidel_thisplane[c2_thisplane_jsm_idx])
 
      diff_chanflux[i]=c1_chanflux[i]-c2_chanflux[i]
      if c1ct gt 0 and c2ct gt 0 then diff_chanflux_jsm[i]=c1_chanflux_jsm[i]-c2_chanflux_jsm[i]
@@ -861,6 +960,8 @@ end
   ccmp_str.c2_fluxperchan=ptr_new(c2_chanflux)
   ccmp_str.c1_fluxperchan_jointsignalmask=ptr_new(c1_chanflux_jsm)
   ccmp_str.c2_fluxperchan_jointsignalmask=ptr_new(c2_chanflux_jsm)
+  ccmp_str.c1_fidelperchan_jointsignalmask=ptr_new(c1_chanfidel_jsm)
+  ccmp_str.c2_fidelperchan_jointsignalmask=ptr_new(c2_chanfidel_jsm)
   ccmp_str.c1_rmsperchan=ptr_new(c1_chanrms)
   ccmp_str.c2_rmsperchan=ptr_new(c2_chanrms)
   ccmp_str.c1_rmsperchan_nosignalmask=ptr_new(c1_chanrms_nosm)
@@ -894,8 +995,8 @@ end
   cgplot,chans,c1_chanflux,xtit='Channel number',ytit='Sum(Tmb [K]) in Channel',charsize=1.5,color=fgcolor,charthick=1.8 $
        ,/nodata,xstyle=8,/ysty,yr=yr,xr=xr,xthick=2,ythick=2,thick=2
   cgplot,chans,chans*0,lines=1,/overplot
-  cgplot,chans,c1_chanflux,color=fsc_color('red'),psym=10,thick=2,/overplot
-  cgplot,chans,c2_chanflux,color=fsc_color('blue'),psym=10,thick=2,/overplot
+  cgplot,chans,c1_chanflux,color=cgcolor('red'),psym=10,thick=2,/overplot
+  cgplot,chans,c2_chanflux,color=cgcolor('blue'),psym=10,thick=2,/overplot
   cgaxis,/xaxis,xr=xr1,tit='Velocity [km/s]',charthick=1.8,charsize=1.5,xthick=2
   
   al_legend,/top,/left,clear=0, box=0 $
@@ -903,7 +1004,7 @@ end
                use_c1str, $
                use_c2str] $
             ,lines=[-99,0,0] $
-            ,colors=[fgcolor,fsc_color('red'),fsc_color('blue')] $
+            ,colors=[fgcolor,cgcolor('red'),cgcolor('blue')] $
             ,charsize=1.,thick=2,charthick=1.8
 
 
@@ -925,8 +1026,8 @@ end
   cgplot,chans,c1_chanflux_jsm,xtit='Channel number',ytit='Sum(Tmb [K]) in Channel',charsize=1.5,color=fgcolor,charthick=1.8 $
        ,/nodata,xstyle=8,/ysty,yr=yr,xr=xr,xthick=2,ythick=2,thick=2
   cgplot,chans,chans*0,lines=1,/overplot
-  cgplot,chans,c1_chanflux_jsm,color=fsc_color('red'),psym=10,thick=2,/overplot
-  cgplot,chans,c2_chanflux_jsm,color=fsc_color('blue'),psym=10,thick=2,/overplot
+  cgplot,chans,c1_chanflux_jsm,color=cgcolor('red'),psym=10,thick=2,/overplot
+  cgplot,chans,c2_chanflux_jsm,color=cgcolor('blue'),psym=10,thick=2,/overplot
   cgaxis,/xaxis,xr=xr1,tit='Velocity [km/s]',charthick=1.8,charsize=1.5,xthick=2
   
   al_legend,/top,/left,clear=0, box=0 $
@@ -934,7 +1035,7 @@ end
                use_c1str, $
                use_c2str] $
             ,lines=[-99,0,0] $
-            ,colors=[fgcolor,fsc_color('red'),fsc_color('blue')] $
+            ,colors=[fgcolor,cgcolor('red'),cgcolor('blue')] $
             ,charsize=1.,thick=2,charthick=1.8
 
 
@@ -1013,8 +1114,8 @@ end
   cgplot,chans,c1_chanrms,xtit='Channel number',ytit='RMS(Tmb [K]) in Channel',charsize=1.5,color=fgcolor,charthick=1.8 $
        ,/nodata,xstyle=8,/ysty,yr=yr,xr=xr,xthick=2,ythick=2,thick=2
   cgplot,chans,chans*0,lines=1,/overplot
-  cgplot,chans,c1_chanrms,color=fsc_color('red'),psym=10,thick=2,/overplot
-  cgplot,chans,c2_chanrms,color=fsc_color('blue'),psym=10,thick=2,/overplot
+  cgplot,chans,c1_chanrms,color=cgcolor('red'),psym=10,thick=2,/overplot
+  cgplot,chans,c2_chanrms,color=cgcolor('blue'),psym=10,thick=2,/overplot
   cgaxis,/xaxis,xr=xr1,tit='Velocity [km/s]',charthick=1.8,charsize=1.5,xthick=2
 
   
@@ -1023,7 +1124,7 @@ end
                use_c1str, $
                use_c2str] $
             ,lines=[-99,0,0] $
-            ,colors=[fgcolor,fsc_color('red'),fsc_color('blue')] $
+            ,colors=[fgcolor,cgcolor('red'),cgcolor('blue')] $
             ,charsize=1.,thick=2,charthick=1.8
 
 
@@ -1048,8 +1149,8 @@ end
   cgplot,chans,c1_chanrms_nosm,xtit='Channel number',ytit='RMS(Tmb [K]) in Channel',charsize=1.5,color=fgcolor,charthick=1.8 $
        ,/nodata,xstyle=8,/ysty,yr=yr,xr=xr,xthick=2,ythick=2,thick=2
   cgplot,chans,chans*0,lines=1,/overplot
-  cgplot,chans,c1_chanrms_nosm,color=fsc_color('red'),psym=10,thick=2,/overplot
-  cgplot,chans,c2_chanrms_nosm,color=fsc_color('blue'),psym=10,thick=2,/overplot
+  cgplot,chans,c1_chanrms_nosm,color=cgcolor('red'),psym=10,thick=2,/overplot
+  cgplot,chans,c2_chanrms_nosm,color=cgcolor('blue'),psym=10,thick=2,/overplot
   cgaxis,/xaxis,xr=xr1,tit='Velocity [km/s]',charthick=1.8,charsize=1.5,xthick=2
 
   
@@ -1058,11 +1159,45 @@ end
                use_c1str, $
                use_c2str] $
             ,lines=[-99,0,0] $
-            ,colors=[fgcolor,fsc_color('red'),fsc_color('blue')] $
+            ,colors=[fgcolor,cgcolor('red'),cgcolor('blue')] $
             ,charsize=1.,thick=2,charthick=1.8
 
 
   write_png,use_plotdir+use_pngfile,TVRD(/TRUE)
+
+  ;======================
+; generate fidelity 'spectra' -- median fidelity per chan figures
+;======================
+
+   use_pngfile='fidelity_perchannel_jsm.png'
+  
+  window,use_win,xsize=900,ysize=400 & use_win=use_win+1
+  !p.position=[0.2,0.2,0.9,0.8]
+  loadct,39 & fgcolor=255
+  xr=[0,nchans] & xr1=[vchans[0],vchans[-1]]
+
+  ymax=max(c1_chanfidel_jsm,/nan) > max(c2_chanfidel_jsm,/nan)
+  yr=[-0.1*ymax,1.1*ymax]
+  tit='Input Cubes, Common FoV, JointSigMask'
+  
+  cgplot,chans,c1_chanfidel_jsm,xtit='Channel number',ytit='Median Fidelity Value in Channel',charsize=1.5,color=fgcolor,charthick=1.8 $
+       ,/nodata,xstyle=8,/ysty,yr=yr,xr=xr,xthick=2,ythick=2,thick=2
+  cgplot,chans,chans*0,lines=1,/overplot
+  cgplot,chans,c1_chanfidel_jsm,color=cgcolor('red'),psym=10,thick=2,/overplot
+  cgplot,chans,c2_chanfidel_jsm,color=cgcolor('blue'),psym=10,thick=2,/overplot
+  cgaxis,/xaxis,xr=xr1,tit='Velocity [km/s]',charthick=1.8,charsize=1.5,xthick=2
+  
+  al_legend,/top,/left,clear=0, box=0 $
+            , [tit, $
+               use_c1str, $
+               use_c2str] $
+            ,lines=[-99,0,0] $
+            ,colors=[fgcolor,cgcolor('red'),cgcolor('blue')] $
+            ,charsize=1.,thick=2,charthick=1.8
+
+
+  write_png,use_plotdir+use_pngfile,TVRD(/TRUE)
+
 
 ;======================
 ; CORRELATION METRICS
@@ -1119,9 +1254,9 @@ end
 
   cgplot,c1[jsigidx],c2[jsigidx],xtit=use_c1str+' [K]',ytit=use_c2str+' [K]',tit='Pixel-pixel correlation inside common mask', $
        charsize=1.5,/nodata,/xsty,/ysty,xr=xr,yr=yr,xthick=2,ythick=2,thick=2,charthick=1.8
-  cgplot,c1[jsigidx],c2[jsigidx],psym=3,color=fsc_color('dark grey'),/overplot,thick=2
-  cgplot,xaxis,yfit,color=fsc_color('blue'),lines=2,/overplot,thick=3
-  equality,color=fsc_color('black'),thick=2
+  cgplot,c1[jsigidx],c2[jsigidx],psym=3,color=cgcolor('dark grey'),/overplot,thick=2
+  cgplot,xaxis,yfit,color=cgcolor('blue'),lines=2,/overplot,thick=3
+  equality,color=cgcolor('black'),thick=2
 
   plotsym,0,1.2,/fill
   
@@ -1131,20 +1266,20 @@ end
             , xmin=xmin, xmax=xmax, binsize=binsize $
             , xmid=xmid, medprof=medprof, madprof=madprof
   oploterror, xmid, medprof, madprof $
-              , errcolor=fsc_color('red'), color=fsc_color('red') $
+              , errcolor=cgcolor('red'), color=cgcolor('red') $
               , errthick=2, psym=8, symsize=1.5
   oplot, xmid, medprof $
-         , psym=8, symsize=1.5, color=fsc_color('red')
+         , psym=8, symsize=1.5, color=cgcolor('red')
 
   
   al_legend,/top,/left,clear=0, box=0 $
             , ['Equality','Slope: '+sigfig(res_linc1c2[0],3)] $
-            ,colors=[fsc_color('black'),fsc_color('blue')] $
+            ,colors=[cgcolor('black'),cgcolor('blue')] $
             ,charsize=1.5,thick=[2,3],linsize=0.5,lines=[0,2],charthick=1.5
 
   al_legend,/bottom,/right,clear=0, box=0 $
             , ['Running median, y on x'] $
-            ,colors=[fsc_color('red')] $
+            ,colors=[cgcolor('red')] $
             ,charsize=1.5,psym=8,charthick=1.5
 
   write_png,use_plotdir+use_pngfile,TVRD(/TRUE)
@@ -1172,7 +1307,7 @@ end
       XTitle=use_c1str+' [K]', YTitle=use_c2str+' [K]', Title=use_tit, $
       Position=[0.2,0.2,0.8,0.8]
 
-     equality,color=fsc_color('black'),thick=2
+     equality,color=cgcolor('black'),thick=2
 
    cgColorbar, position=[0.825,0.2,0.85,0.8]  $
                , Title='Npixels', /vertical, /right $
@@ -1198,9 +1333,9 @@ end
 
   cgplot,c2[jsigidx],c1[jsigidx],xtit=use_c2str+' [K]',ytit=use_c1str+' [K]',tit='Pixel-pixel correlation inside common mask', $
        charsize=1.5,/nodata,/xsty,/ysty,xr=xr,yr=yr,xthick=2,ythick=2,thick=2,charthick=1.8
-  cgplot,c2[jsigidx],c1[jsigidx],psym=3,color=fsc_color('dark grey'),/overplot,thick=2
-  cgplot,xaxis,yfit,color=fsc_color('blue'),lines=2,/overplot,thick=3
-  equality,color=fsc_color('black'),thick=2
+  cgplot,c2[jsigidx],c1[jsigidx],psym=3,color=cgcolor('dark grey'),/overplot,thick=2
+  cgplot,xaxis,yfit,color=cgcolor('blue'),lines=2,/overplot,thick=3
+  equality,color=cgcolor('black'),thick=2
 
   plotsym,0,1.2,/fill
   
@@ -1210,20 +1345,20 @@ end
             , xmin=xmin, xmax=xmax, binsize=binsize $
             , xmid=xmid, medprof=medprof, madprof=madprof
   oploterror, xmid, medprof, madprof $
-              , errcolor=fsc_color('red'), color=fsc_color('red') $
+              , errcolor=cgcolor('red'), color=cgcolor('red') $
               , errthick=2, psym=8, symsize=1.5
   oplot, xmid, medprof $
-         , psym=8, symsize=1.5, color=fsc_color('red')
+         , psym=8, symsize=1.5, color=cgcolor('red')
 
   
   al_legend,/top,/left,clear=0, box=0 $
             , ['Equality','Slope: '+sigfig(res_linc2c1[0],3)] $
-            ,colors=[fsc_color('black'),fsc_color('blue')] $
+            ,colors=[cgcolor('black'),cgcolor('blue')] $
             ,charsize=1.5,thick=[2,3],linsize=0.5,lines=[0,2],charthick=1.5
 
   al_legend,/bottom,/right,clear=0, box=0 $
             , ['Running median, y on x'] $
-            ,colors=[fsc_color('red')] $
+            ,colors=[cgcolor('red')] $
             ,charsize=1.5,psym=8,charthick=1.5
 
   write_png,use_plotdir+use_pngfile,TVRD(/TRUE)
@@ -1250,7 +1385,7 @@ end
            XTitle=use_c1str+' [K]', YTitle=use_c2str+' [K]', Title=use_tit,$
            Position=[0.2,0.2,0.8,0.8]
 
-    equality,color=fsc_color('black'),thick=2
+    equality,color=cgcolor('black'),thick=2
 
   cgColorbar, position=[0.825,0.2,0.85,0.8]  $
               , Title='Npixels', /vertical, /right $
@@ -1277,8 +1412,8 @@ end
 
   cgplot,c1[jsigidx],c2[jsigidx],xtit=use_c1str+' [K]',ytit=use_c2str+' [K]',tit='Pixel-pixel correlation inside common mask', $
        charsize=1.5,/nodata,/xsty,/ysty,xr=xr,yr=yr,xthick=2,ythick=2,thick=2,charthick=1.8,/xlo,/ylo
-  cgplot,c1[jsigidx],c2[jsigidx],psym=3,color=fsc_color('dark grey'),/overplot,thick=2
-  equality,color=fsc_color('black'),thick=2
+  cgplot,c1[jsigidx],c2[jsigidx],psym=3,color=cgcolor('dark grey'),/overplot,thick=2
+  equality,color=cgcolor('black'),thick=2
 
   plotsym,0,1.2,/fill
   
@@ -1288,20 +1423,20 @@ end
             , xmin=xmin, xmax=xmax, binsize=binsize $
             , xmid=xmid, medprof=medprof, madprof=madprof ;, madlogprof=madlogprof
 ;  oploterror, xmid, medprof, madprof $
-;              , errcolor=fsc_color('red'), color=fsc_color('red') $
+;              , errcolor=cgcolor('red'), color=cgcolor('red') $
 ;              , errthick=2, psym=8, symsize=1.5
   oplot, xmid, medprof $
-         , psym=8, symsize=1.5, color=fsc_color('red')
+         , psym=8, symsize=1.5, color=cgcolor('red')
 
   
 ;  al_legend,/top,/left,clear=0, box=0 $
 ;            , ['Equality','Slope: '+sigfig(res_linc1c2[0],3)] $
-;            ,colors=[fsc_color('black'),fsc_color('blue')] $
+;            ,colors=[cgcolor('black'),cgcolor('blue')] $
 ;            ,charsize=1.5,thick=[2,3],linsize=0.5,lines=[0,2],charthick=1.5
 
 ;  al_legend,/bottom,/right,clear=0, box=0 $
 ;            , ['Running median, y on x'] $
-;            ,colors=[fsc_color('red')] $
+;            ,colors=[cgcolor('red')] $
 ;            ,charsize=1.5,psym=8,charthick=1.5
 
   write_png,use_plotdir+use_pngfile,TVRD(/TRUE)
@@ -1330,7 +1465,7 @@ end
            XTitle=use_c1str+' [log K]', YTitle=use_c2str+' [log K]', Title=use_tit,$
            Position=[0.2,0.2,0.8,0.8]
 
-  equality,color=fsc_color('black'),thick=2
+  equality,color=cgcolor('black'),thick=2
     
   cgColorbar, position=[0.825,0.2,0.85,0.8]  $
               , Title='Npixels', /vertical, /right $
@@ -1355,8 +1490,8 @@ end
 
   cgplot,c2[jsigidx],c1[jsigidx],xtit=use_c2str+' [K]',ytit=use_c1str+' [K]',tit='Pixel-pixel correlation inside common mask', $
        charsize=1.5,/nodata,/xsty,/ysty,xr=xr,yr=yr,xthick=2,ythick=2,thick=2,charthick=1.8,/xlo,/ylo
-  cgplot,c2[jsigidx],c1[jsigidx],psym=3,color=fsc_color('dark grey'),/overplot,thick=2
-  equality,color=fsc_color('black'),thick=2
+  cgplot,c2[jsigidx],c1[jsigidx],psym=3,color=cgcolor('dark grey'),/overplot,thick=2
+  equality,color=cgcolor('black'),thick=2
 
   plotsym,0,1.2,/fill
   
@@ -1366,20 +1501,20 @@ end
             , xmin=xmin, xmax=xmax, binsize=binsize $
             , xmid=xmid, medprof=medprof, madprof=madprof ;, madlogprof=madlogprof
 ;  oploterror, xmid, medprof, madprof $
-;              , errcolor=fsc_color('red'), color=fsc_color('red') $
+;              , errcolor=cgcolor('red'), color=cgcolor('red') $
 ;              , errthick=2, psym=8, symsize=1.5
   oplot, xmid, medprof $
-         , psym=8, symsize=1.5, color=fsc_color('red')
+         , psym=8, symsize=1.5, color=cgcolor('red')
 
   
 ;  al_legend,/top,/left,clear=0, box=0 $
 ;            , ['Equality','Slope: '+sigfig(res_linc1c2[0],3)] $
-;            ,colors=[fsc_color('black'),fsc_color('blue')] $
+;            ,colors=[cgcolor('black'),cgcolor('blue')] $
 ;            ,charsize=1.5,thick=[2,3],linsize=0.5,lines=[0,2],charthick=1.5
 
 ;  al_legend,/bottom,/right,clear=0, box=0 $
 ;            , ['Running median, y on x'] $
-;            ,colors=[fsc_color('red')] $
+;            ,colors=[cgcolor('red')] $
 ;            ,charsize=1.5,psym=8,charthick=1.5
 
     write_png,use_plotdir+use_pngfile,TVRD(/TRUE)
@@ -1408,7 +1543,7 @@ end
            XTitle=use_c2str+' [log K]', YTitle=use_c1str+' [log K]', Title=use_tit,$
            Position=[0.2,0.2,0.8,0.8]
 
-  equality,color=fsc_color('black'),thick=2
+  equality,color=cgcolor('black'),thick=2
 
   cgColorbar, position=[0.825,0.2,0.85,0.8]  $
               , Title='Npixels', /vertical, /right $
