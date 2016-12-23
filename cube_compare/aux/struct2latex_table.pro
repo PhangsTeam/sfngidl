@@ -1,7 +1,8 @@
 PRO struct2latex_table,st,fileout,exp_accur=exp_accur,silent=silent,formats=formats,indef_replace=indef_replace, $
                        error_st=error_st,use_all_format=use_all_format,erindex=erindex,parents=parents, $
                        replace_from=replace_from,replace_to=replace_to,nowrite=nowrite,caption=caption, label=label, $
-                       replace_tagnames_only=replace_tagnames_only,small=small,tiny=tiny,landscape=landscape, units=units
+                       replace_tagnames_only=replace_tagnames_only,small=small,tiny=tiny,landscape=landscape, units=units, $
+                       forcepos=forcepos
 
 ;+
 ; NAME:
@@ -297,7 +298,12 @@ tab_header=[struct2latex_table_sign]
 IF keyword_set(landscape) THEN BEGIN
   tab_header=[tab_header,'\begin{landscape}']
 ENDIF  
-tab_header=[tab_header,'\begin{table}']
+
+;tab_header=[tab_header,'\begin{table}']
+use_beginstr='\begin{table}'
+if keyword_set(forcepos) then use_beginstr='\begin{table}[H]'
+tab_header=[tab_header,use_beginstr]
+
 IF keyword_set(small) THEN BEGIN
   tab_header=[tab_header,'{\small']
 ENDIF
