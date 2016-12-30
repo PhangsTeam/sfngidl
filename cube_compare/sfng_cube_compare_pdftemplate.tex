@@ -126,11 +126,28 @@ values in the matched cubes.
 \section{Image Fidelity}
 \label{sec:fidelity}
 %\input{fidelity_table}
-These figures illustrate the overall fidelity CDF, determined over the region where emission is identified in both cubes. 
-\input{fidelity_cube1_cdf_fig}
-\input{fidelity_cube2_cdf_fig}
 
-The following figure indicates the median fidelity in each channel, determined over the region where emission is identified in both cubes. 
+\noindent The image fidelity at each pixel $(i,j)$ is defined using
+equation 4 of J\'er\^ome's note {\tt ALMA Memo 398},
+
+\begin{equation}
+{\rm Fidelity}(i,j)  =\frac{{\rm abs}{\rm Cube}(i,j)}{{\rm max}({\rm abs}(DiffCube(i,j)),0.7\times \sigma_{RMS,DiffCube}}))\,.
+\end{equation}
+
+\noindent (J\'er\^ome's note discusses fidelity as a measure of similarity
+between an input model and simulated observations. Here we use it to
+describe the similarity between two cubes.)\\
+
+\noindent The following figures illustrate the CDF of the fidelity cubes for
+Cube 1 and Cube 2, determined over the region where emission is
+identified in both cubes. The vertical lines indicate the median
+fidelity in the cube for pixels above a given threshold (specified as
+a percentage of the peak intensity value in the cube).
+
+\input{fidelity_cube1_cdf_fig} \input{fidelity_cube2_cdf_fig}
+
+\noindent The following figure indicates the median fidelity in each channel,
+determined over the region where emission is identified in both cubes.
 \input{fidelity_perchannel_jsm_fig}
 
 \section{Power Spectra}
