@@ -38,17 +38,25 @@ function sfng_empty_cubecmp_str
               c2_rmscube_fits: '' , $
               c1_totflux: nan , $
               c2_totflux: nan , $
+              c1_peak: nan , $
+              c2_peak: nan , $
               c1_totflux_signalmask: nan , $
               c2_totflux_signalmask: nan , $
               c1_totflux_jointsignalmask: nan , $
               c2_totflux_jointsignalmask: nan , $
+              c1_peak_jointsignalmask: nan , $
+              c2_peak_jointsignalmask: nan , $
               c1_totflux_nosignalmask: nan , $
               c2_totflux_nosignalmask: nan , $
               totfluxdiff: nan , $
+              diffabspeak: nan , $
               totfluxdiff_jointsignalmask: nan , $
+              diffabspeak_jointsignalmask: nan , $
               totfluxdiff_nosignalmask: nan , $
+              diffabspeak_nosignalmask: nan , $
               c1_npix_signalmask: nan , $
               c2_npix_signalmask: nan , $
+              npix_tot: nan , $
               npix_cmp_fov: nan , $
               npix_jointsignalmask: nan , $
               npix_nosignalmask: nan , $
@@ -56,6 +64,8 @@ function sfng_empty_cubecmp_str
               c2_fluxperchan: ptr_new() , $
               c1_fluxperchan_jointsignalmask: ptr_new() , $
               c2_fluxperchan_jointsignalmask: ptr_new() , $
+              emission_startchan:nan, $
+              emission_endchan:nan, $
               c1_rmsperchan: ptr_new() , $
               c2_rmsperchan: ptr_new() , $
               c1_rmsperchan_nosignalmask: ptr_new() , $
@@ -71,6 +81,8 @@ function sfng_empty_cubecmp_str
               diffcube_stats_nosignal: stats_struct , $
               c1_fidel_stats: fltarr(4), $
               c2_fidel_stats: fltarr(4), $
+              c1_fidel_levs: fltarr(4), $ ; % levels multiplied by image peak
+              c2_fidel_levs: fltarr(4), $
               fidel_levs: fltarr(4), $
               c1_fidelperchan_jointsignalmask: ptr_new() , $
               c2_fidelperchan_jointsignalmask: ptr_new() , $

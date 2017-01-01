@@ -64,7 +64,8 @@ where significant emission has been identified in both cubes.
 \section{Flux Per Channel}
 \label{sect:perchannel}
 %\input{perchannel_table}
-These figures show the flux per channel in the matched cubes and the difference cube.
+
+\noindent The following figures show the flux per channel in the matched cubes and the difference cube.
 \input{flux_perchannel_fig}
 \input{flux_perchannel_jsm_fig}
 \input{diffcube_flux_perchannel_fig}
@@ -117,15 +118,33 @@ values in the matched cubes.
 
 \section{Channel Maps}
 \label{sect:channel_maps}
-%\input{emission_masks_table}
+
+\noindent The following figure shows the individual channels of cube 1.\\
+
+\input{cube1_chanmaps_fig}
+
+\noindent The following figure shows the individual channels of cube 2.\\
+
+\input{cube2_chanmaps_fig}
+
+\noindent The following figure shows the individual channels of the difference cube.\\
+
+\input{diffcube_chanmaps_fig}
 
 \section{Emission Masks}
 \label{sect:emission_masks}
-%\input{emission_masks_table}
+
+\noindent This table shows the number of good (x,y,v) pixels inside the different regions/masks.\\
+
+\input{emission_masks_table}
+
+\noindent The following figure shows the individual channels of the
+joint emission mask (black=emission, white=no emission).\\
+
+\input{emissionmask_chanmaps_fig}
 
 \section{Image Fidelity}
 \label{sec:fidelity}
-%\input{fidelity_table}
 
 \noindent The image fidelity at each pixel $(i,j)$ is defined using
 equation 4 of J\'er\^ome's note {\tt ALMA Memo 398},
@@ -142,12 +161,18 @@ describe the similarity between two cubes.)\\
 Cube 1 and Cube 2, determined over the region where emission is
 identified in both cubes. The vertical lines indicate the median
 fidelity in the cube for pixels above a given threshold (specified as
-a percentage of the peak intensity value in the cube).
+a percentage of the peak intensity value in the cube).\\
 
-\input{fidelity_cube1_cdf_fig} \input{fidelity_cube2_cdf_fig}
+\input{fidelity_cube1_cdf_fig}
+\input{fidelity_cube2_cdf_fig}
+
+\noindent The following table summarises the fidelity statistics.\\
+
+\input{fidelities_table}
 
 \noindent The following figure indicates the median fidelity in each channel,
 determined over the region where emission is identified in both cubes.
+
 \input{fidelity_perchannel_jsm_fig}
 
 \section{Power Spectra}

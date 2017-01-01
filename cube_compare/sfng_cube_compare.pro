@@ -7,14 +7,15 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
                       ,expand_mask_edges=expand_mask_edges $
                       ,jy2k=jy2k, rebaseline=rebaseline $
                       ,xygrid=xygrid,vgrid=vgrid $
+                      ,allchannels=allchannels $
                       ,help=help,verbose=verbose,noreport=noreport,nostop=nostop 
 
 ;+ NAME:
 ;     sfng_cube_compare
 ; PURPOSE:
-;     compares two cubes. Essentially a wrapper to a library of routines that bring
-;     cubes to a matching grid, resolution, common field-of-view etc, and calculate
-;     statistics about emission and emission-free regions in the cubes.
+;     compares two cubes. Essentially a wrapper to a library of subroutines that bring
+;     cubes to a matching grid, resolution, common field-of-view etc., and calculate
+;     various statistics about emission and emission-free regions in the cubes.
 ; INPUTS:
 ;     idl_in1/2 = IDL cube files for comparison
 ;     hdr_in1/2 = corresponding input header
@@ -63,6 +64,8 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
 ;                and IDL save structure of results
 ;     nostop = exit the routine when finished. If not set, execution
 ;              will pause just before return statement at end of routine.
+;     allchannels = produce channel maps for all channels. Default is
+;     to use the channels with emission, with a 20km/s margin on each side.
 ; EXAMPLES
 ;       sfng_cube_compare,datadir=use_datadir,outdir=use_outdir,plotdir=use_plotdir $
 ;                    ,reportdir=use_reportdir,savedir=use_savedir $
@@ -123,6 +126,7 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
   use_xygrid=1 ; which cube is master for (x,y) pixel grid?
   use_vgrid=1 ; which cube is master for channelisation?
   do_report=1
+  use_allchannels=0
 
   ; things that user can change here 
   use_win = 0L
@@ -154,6 +158,7 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
   if keyword_set(vgrid) then use_vgrid=vgrid
   if keyword_set(galaxy) then use_galaxy=galaxy
   if keyword_set(noreport) then do_report = 0
+  if keyword_set(allchannels) then use_allchannels = 1
   if keyword_set(jy2k) then do_jy2k = jy2k
   if keyword_set(rebaseline) then use_rebaseline = rebaseline
   
@@ -302,6 +307,9 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
    match_bmaj=sxpar(c1hdr,'BMAJ',count=bmaj_ct)
    match_pixdim=size(c1,/dim)
    nx=match_pixdim[0] & ny=match_pixdim[1] & nchans=match_pixdim[2]
+   chanw_kms=abs(match_cdelt3)
+   pixscale_as=abs(match_cdelt1)*3600.
+   angres_as=match_bmaj*3600.
    
    ccmp_str.pixscale_as=abs(match_cdelt1)*3600.
    ccmp_str.chanw_kms=abs(match_cdelt3)
@@ -627,6 +635,7 @@ end
    noisect_c1=fovct-c1ct
    noisect_c2=fovct-c2ct
    
+   ccmp_str.npix_tot=float(match_pixdim[0])*match_pixdim[1]*match_pixdim[2]
    ccmp_str.npix_cmp_fov=fovct
    ccmp_str.c1_npix_signalmask=c1ct
    ccmp_str.c2_npix_signalmask=c2ct
@@ -639,7 +648,10 @@ end
    
   ccmp_str.c1_totflux=total(c1,/nan)
   ccmp_str.c2_totflux=total(c2,/nan)
+  ccmp_str.c1_peak=max(c1,/nan)
+  ccmp_str.c2_peak=max(c2,/nan)
   ccmp_str.totfluxdiff=total(diffcube,/nan)
+  ccmp_str.diffabspeak=max(abs(diffcube),/nan)
   if c1ct gt 0 then ccmp_str.c1_totflux_signalmask=total(c1[c1sigidx],/nan)
   if c2ct gt 0 then ccmp_str.c2_totflux_signalmask=total(c2[c2sigidx],/nan)
   if nsct gt 0 then ccmp_str.c1_totflux_nosignalmask=total(c1[nosigidx],/nan)
@@ -647,7 +659,11 @@ end
   if jct gt 0 then  ccmp_str.c1_totflux_jointsignalmask=total(c1[jsigidx],/nan)
   if jct gt 0 then  ccmp_str.c2_totflux_jointsignalmask=total(c2[jsigidx],/nan)
   if jct gt 0 then  ccmp_str.totfluxdiff_jointsignalmask=total(diffcube[jsigidx],/nan)
+  if jct gt 0 then  ccmp_str.c1_peak_jointsignalmask=max(c1[jsigidx],/nan)
+  if jct gt 0 then  ccmp_str.c2_peak_jointsignalmask=max(c2[jsigidx],/nan)
+  if jct gt 0 then  ccmp_str.diffabspeak_jointsignalmask=max(abs(diffcube[jsigidx]),/nan)
   if nsct gt 0 then ccmp_str.totfluxdiff_nosignalmask=total(diffcube[nosigidx],/nan)
+  if nsct gt 0 then ccmp_str.diffabspeak_nosignalmask=max(abs(diffcube[nosigidx]),/nan)
 
   ccmp_str.npix_cmp_fov=fovct
   ccmp_str.c1_npix_signalmask=c1ct
@@ -895,7 +911,8 @@ end
   ccmp_str.c1_fidel_stats=fidel_medians_c1
   ccmp_str.c2_fidel_stats=fidel_medians_c2
   ccmp_str.fidel_levs=use_fidel_levs
-  
+  ccmp_str.c1_fidel_levs=use_fidel_levs*ccmp_str.c1_peak_jointsignalmask
+  ccmp_str.c2_fidel_levs=use_fidel_levs*ccmp_str.c2_peak_jointsignalmask
   
 ;======================
 ; STATISTICS RE FLUX, FIDELITY, RMS PER CHANNEL
@@ -956,6 +973,16 @@ end
 
   endfor
 
+  emission_startchan=0
+  emission_endchan=nchans-1
+  emission_idx=where(c1_chanflux_jsm gt 0, emct)
+  if emct gt 0 then begin
+     emission_startchan=emission_idx[0]
+     emission_endchan=emission_idx[-1]
+  end
+
+  
+  
   ccmp_str.c1_fluxperchan=ptr_new(c1_chanflux)
   ccmp_str.c2_fluxperchan=ptr_new(c2_chanflux)
   ccmp_str.c1_fluxperchan_jointsignalmask=ptr_new(c1_chanflux_jsm)
@@ -969,8 +996,9 @@ end
   ccmp_str.fluxdiffperchan=ptr_new(diff_chanflux)
   ccmp_str.fluxdiffperchan_jointsignalmask=ptr_new(diff_chanflux_jsm)
   ccmp_str.fluxdiffperchan_nosignalmask=ptr_new(diff_chanflux_nosm)
+  ccmp_str.emission_startchan=emission_startchan
+  ccmp_str.emission_endchan=emission_endchan
 
- 
 ;======================
 ; generate 'spectra' -- flux/rms per chan figures
 ;======================
@@ -1165,7 +1193,7 @@ end
 
   write_png,use_plotdir+use_pngfile,TVRD(/TRUE)
 
-  ;======================
+;======================
 ; generate fidelity 'spectra' -- median fidelity per chan figures
 ;======================
 
@@ -1198,7 +1226,75 @@ end
 
   write_png,use_plotdir+use_pngfile,TVRD(/TRUE)
 
+;======================
+; CHANNEL MAPS
+;======================
 
+; default is to show only emission
+; channels with 20km/s margin on each side
+  start_chan=emission_startchan-fix(20./chanw_kms)
+  end_chan=emission_endchan+fix(20./chanw_kms)
+  start_chan=0>start_chan & end_chan=end_chan<(nchans-1)
+
+; if use_allchannels is set -- show all channels in cube
+  if use_allchannels eq 1 then begin
+     start_chan=0 & end_chan=nchans-1
+  end
+  
+  loadct,20,rgb_table=palette
+  TVLCT, cgColor('gray', /Triple), 0
+  immin=percentile(c1,95)<percentile(c2,95) & immax=percentile(c1,1)>percentile(c2,1)
+
+; cube 1
+  use_win=use_win+1
+  for k=start_chan,end_chan do begin
+     window,use_win,xsize=400,ysize=400 
+     cgImage, c1[*,*,k],  /Axes, Palette=palette, charsize=0.8, minval=immin, maxval=immax $
+              ,tit='channel '+strtrim(STRING(fix(k+1)),2) $
+              ,Position=[0.05,0.05,0.9,0.9] 
+     use_pngfile='c1_chan'+STRING(k+1, FORMAT='(I3.3)')+'.png'
+     write_png,use_plotdir+use_pngfile,TVRD(/TRUE)
+
+  endfor
+
+; cube 2
+  use_win=use_win+1
+  for k=start_chan,end_chan do begin
+     window,use_win,xsize=400,ysize=400 
+     cgImage, c2[*,*,k],  /Axes, Palette=palette, charsize=0.8, minval=immin, maxval=immax $
+              , tit='channel '+strtrim(STRING(fix(k+1)),2) $
+              ,Position=[0.05,0.05,0.9,0.9]
+     use_pngfile='c2_chan'+STRING(k+1, FORMAT='(I3.3)')+'.png'
+     write_png,use_plotdir+use_pngfile,TVRD(/TRUE)
+ endfor
+
+; diffcube
+  use_win=use_win+1
+  immin=percentile(diffcube,98) & immax=percentile(diffcube,2)
+  for k=start_chan,end_chan do begin
+     window,use_win,xsize=400,ysize=400 
+     cgImage, diffcube[*,*,k],  /Axes, Palette=palette, charsize=0.8, minval=immin, maxval=immax $
+              , Position=[0.05,0.05,0.9,0.9] $
+              ,tit='channel '+strtrim(STRING(fix(k+1)),2)
+     use_pngfile='diffcube_chan'+STRING(k+1, FORMAT='(I3.3)')+'.png'
+     write_png,use_plotdir+use_pngfile,TVRD(/TRUE)
+  endfor
+
+; joint emission mask
+
+  use_win=use_win+1
+  loadct,0
+  reversect
+  immin=0. & immax=1.
+  for k=start_chan,end_chan do begin
+     window,use_win,xsize=400,ysize=400 
+     cgImage, joint_sigmask[*,*,k],  /Axes,  charsize=0.8, minval=immin, maxval=immax $
+              , Position=[0.05,0.05,0.9,0.9] $
+              , tit='channel '+strtrim(STRING(fix(k+1)),2)
+     use_pngfile='jointsignalmask_chan'+STRING(k+1, FORMAT='(I3.3)')+'.png'
+     write_png,use_plotdir+use_pngfile,TVRD(/TRUE)
+  endfor
+  
 ;======================
 ; CORRELATION METRICS
 ;======================

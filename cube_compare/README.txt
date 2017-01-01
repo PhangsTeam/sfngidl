@@ -10,7 +10,7 @@ IRAM HERA cubes for NGC628.
 The main outputs are:
 (i) an IDL save structure containing measurements of different properties of both cubes
 (ii) a PDF report (if requested)
-(ii) lots of plots!
+(iii) lots of plots
 
 The main routine is sfng_cube_compare.pro, which calls all the other routines that you will find here.
 
@@ -23,7 +23,4 @@ PDF report, so you should be careful about over-writing what you've
 created***
 
 Still to add:
-* table for Jerome's fidelity statistic
 * power spectra
-* channel maps -- matched cubes, difference and fidelity cubes
-* description of emission masks in the report

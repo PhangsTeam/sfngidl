@@ -2,7 +2,6 @@ PRO sfng_make_latex_elements,cube_cmp_str $
                              ,figures_only=figures_only $
                              ,tables_only=tables_only $
                              ,help=help,verbose=verbose
-                             
 
 ; NAME:
 ;     sfng_make_latex_elements
@@ -163,12 +162,39 @@ PRO sfng_make_latex_elements,cube_cmp_str $
 
   message,'Wrote '+fileout,/info
 
- 
+;================
+;== Make the emission masks table
+;================
+
+
+  one_st={npix_tot:nan,npix_fov:nan,npix_c1msk:nan,npix_c2msk:nan,npix_jointmsk:nan}
+  st=replicate(one_st,1)
+  label='tab:emission_masks'
+
+   st[0].npix_tot=cube_cmp_str.npix_tot
+   st[0].npix_fov=cube_cmp_str.npix_cmp_fov
+   st[0].npix_c1msk=cube_cmp_str.c1_npix_signalmask
+   st[0].npix_c2msk=cube_cmp_str.c2_npix_signalmask
+   st[0].npix_jointmsk=cube_cmp_str.npix_jointsignalmask
+
+  fileout=use_reportdir+'emission_masks_table.tex'
+  caption='Pixels in Emission Masks'
+  label='tab:emission_masks'
+
+  frmt='( I0, " & ", I0, " & ", I0, " & ", I0, " & ", I0, " \\")'
+  units=['', '', '', '', ''] ; order is order of tags in the structure, not replace arrays
+  tiny=0 & small=1 & landscape=1
+
+  struct2latex_table,st,fileout,use_all_format=frmt, /force, $
+                     /silent,caption=caption,label=label,units=units,tiny=tiny,small=small,landscape=landscape
+
+  message,'Wrote '+fileout,/info
+
 ;================
 ;== Make the flux statistics table
 ;================
 
-  one_st={file:'',total_flux:nan,total_flux_jointmask:nan}
+  one_st={file:'',total_flux:nan,peak:nan,total_flux_jointmask:nan,peak_jointmask:nan}
   st=replicate(one_st,3)
   label='tab:total_flux'
 
@@ -178,16 +204,22 @@ PRO sfng_make_latex_elements,cube_cmp_str $
   st[0].total_flux=cube_cmp_str.c1_totflux
   st[1].total_flux=cube_cmp_str.c2_totflux
   st[2].total_flux=cube_cmp_str.TOTFLUXDIFF
+  st[0].peak=cube_cmp_str.c1_peak
+  st[1].peak=cube_cmp_str.c2_peak
+  st[2].peak=cube_cmp_str.diffabspeak
   st[0].total_flux_jointmask=cube_cmp_str.c1_totflux_jointsignalmask
   st[1].total_flux_jointmask=cube_cmp_str.c2_totflux_jointsignalmask
   st[2].total_flux_jointmask=cube_cmp_str.TOTFLUXDIFF_jointsignalmask
+  st[0].peak_jointmask=cube_cmp_str.c1_peak_jointsignalmask
+  st[1].peak_jointmask=cube_cmp_str.c2_peak_jointsignalmask
+  st[2].peak_jointmask=cube_cmp_str.diffabspeak_jointsignalmask
 
   fileout=use_reportdir+'flux_table.tex'
   caption='Total Flux Statistics'
 
-  frmt='(A40, " & ",E0.3, " & ",E0.3, " \\")'
-  units=['', '[K.km/s.pix]' , '[K.km/s.pix]'] ; order is order of tags in the structure, not replace arrays
-  tiny=0 & small=1 & landscape=0
+  frmt='(A40, " & ",E0.3, " & ",F0.2, " & ",E0.3, " & ",F0.2, " \\")'
+  units=['', '[K.km/s.pix]' , '[K]', '[K.km/s.pix]' ,'[K]'] ; order is order of tags in the structure, not replace arrays
+  tiny=0 & small=1 & landscape=1
 
   struct2latex_table,st,fileout,use_all_format=frmt, /force, $
                      /silent,caption=caption,label=label,units=units,tiny=tiny,small=small,landscape=landscape
@@ -250,10 +282,192 @@ PRO sfng_make_latex_elements,cube_cmp_str $
 
   message,'Wrote '+fileout,/info
 
-  if keyword_set(tables_only) then goto, the_end
+  
+;================
+;== Make the correlation metrics table
+;================
 
+  one_st={file:'',levels_perc:'',levels_abs:'',median_fidelities:''}
+  st=replicate(one_st,2)
+
+  st[0].file=cube_cmp_str.c1_file
+  st[1].file=cube_cmp_str.c2_file
+  st[0].levels_perc='['+strjoin(sigfig(cube_cmp_str.fidel_levs,2),',')+']'
+  st[1].levels_perc='['+strjoin(sigfig(cube_cmp_str.fidel_levs,2),',')+']'
+  st[0].levels_abs='['+strjoin(sigfig(cube_cmp_str.c1_fidel_levs,4),',')+']'
+  st[1].levels_abs='['+strjoin(sigfig(cube_cmp_str.c2_fidel_levs,4),',')+']'
+  st[0].median_fidelities='['+strjoin(sigfig(cube_cmp_str.c1_fidel_stats,4),',')+']'
+  st[1].median_fidelities='['+strjoin(sigfig(cube_cmp_str.c2_fidel_stats,4),',')+']'
+
+  fileout=use_reportdir+'fidelities_table.tex'
+  caption='Fidelity Statistics'
+  label='tab:fidelity_statistics'
+
+  frmt='(A40, " & ", A30, " & ", A30, " & ", A30,  " \\")'
+  units=['', '[\% of peak]' , '[K]', ''] ; order is order of tags in the structure, not replace arrays
+  tiny=0 & small=1 & landscape=1
+
+  struct2latex_table,st,fileout,use_all_format=frmt, /force, $
+                     /silent,caption=caption,label=label,units=units,tiny=tiny,small=small,landscape=landscape
+
+  message,'Wrote '+fileout,/info
+
+
+  if keyword_set(tables_only) then goto, the_end
+ 
 
 figures_only:
+
+;================
+;== Make the channel map figures (multi-panel)
+;================
+
+; settings for 'channel-map' type figures
+  
+  newpage=0
+  dimension_type='width'
+  dimension_value=3.           ;cm
+  dimension_unit='cm'
+  angle=0.
+  centering=0
+
+; emission_mask chan maps
+  
+  caption='Joint Emission Mask: Individual Channels'
+  counter=1
+  allfiles=file_basename(file_search("plots/joint*png"))
+  nfiles=n_elements(allfiles)
+  nfigs=ceil(nfiles/16.) ; we want 4x4 panels in each figure
+  start_idx=0 & end_idx=15
+
+  tex_file_name=use_reportdir+'emissionmask_chanmaps_fig.tex'
+  openw,unit,tex_file_name,/get_lun
+
+  for k=0,nfigs-1 do begin
+     if counter gt 1 then caption=caption+' (cont.)'
+     label='fig:jsm_chanmaps_'+strtrim(string(fix(counter)),2)
+     start_idx=start_idx+k*16
+     end_idx=end_idx+k*16
+     if end_idx ge nfiles then end_idx=nfiles-1
+     use_files=allfiles[start_idx:end_idx]
+     fig_st=make_latex_fig_structure(position=position,double_column=double_column,centering=centering, $
+                                    dimension_type=dimension_type,dimension_value=dimension_value,dimension_unit=dimension_unit, $
+                                    label=label,caption=caption,newpage=newpage,ps_file_names=use_files,_extra=_extra)
+     lst=latex_figst2figstr(fig_st)
+  
+     FOR i=0L,n_elements(lst)-1 DO printf,unit,lst(i)
+     printf,unit,' '
+     counter=counter+1
+  end
+  
+  close,unit
+  free_lun,unit
+  message,'Wrote '+tex_file_name,/info
+
+
+; cube1 chan maps
+  
+  caption='Cube 1: Individual Channels of Matched Cube'
+  counter=1
+  allfiles=file_basename(file_search("plots/c1_chan*png"))
+  nfiles=n_elements(allfiles)
+  nfigs=ceil(nfiles/16.) ; we want 4x4 panels in each figure
+  start_idx=0 & end_idx=15
+
+  tex_file_name=use_reportdir+'cube1_chanmaps_fig.tex'
+  openw,unit,tex_file_name,/get_lun
+
+  for k=0,nfigs-1 do begin
+     if counter gt 1 then caption=caption+' (cont.)'
+     label='fig:cube1_chanmaps_'+strtrim(string(fix(counter)),2)
+     start_idx=start_idx+k*16
+     end_idx=end_idx+k*16
+     if end_idx ge nfiles then end_idx=nfiles-1
+     use_files=allfiles[start_idx:end_idx]
+     fig_st=make_latex_fig_structure(position=position,double_column=double_column,centering=centering, $
+                                    dimension_type=dimension_type,dimension_value=dimension_value,dimension_unit=dimension_unit, $
+                                    label=label,caption=caption,newpage=newpage,ps_file_names=use_files,_extra=_extra)
+     lst=latex_figst2figstr(fig_st)
+  
+     FOR i=0L,n_elements(lst)-1 DO printf,unit,lst(i)
+     printf,unit,' '
+     counter=counter+1
+  end
+  
+  close,unit
+  free_lun,unit
+  message,'Wrote '+tex_file_name,/info
+
+
+; cube2 chan maps
+  
+  caption='Cube 2: Individual Channels of Matched Cube'
+  counter=1
+  allfiles=file_basename(file_search("plots/c1_chan*png"))
+  nfiles=n_elements(allfiles)
+  nfigs=ceil(nfiles/16.) ; we want 4x4 panels in each figure
+  start_idx=0 & end_idx=15
+
+  tex_file_name=use_reportdir+'cube2_chanmaps_fig.tex'
+  openw,unit,tex_file_name,/get_lun
+
+  for k=0,nfigs-1 do begin
+     if counter gt 1 then caption=caption+' (cont.)'
+     label='fig:cube2_chanmaps_'+strtrim(string(fix(counter)),2)
+     start_idx=start_idx+k*16
+     end_idx=end_idx+k*16
+     if end_idx ge nfiles then end_idx=nfiles-1
+     use_files=allfiles[start_idx:end_idx]
+     fig_st=make_latex_fig_structure(position=position,double_column=double_column,centering=centering, $
+                                    dimension_type=dimension_type,dimension_value=dimension_value,dimension_unit=dimension_unit, $
+                                    label=label,caption=caption,newpage=newpage,ps_file_names=use_files,_extra=_extra)
+     lst=latex_figst2figstr(fig_st)
+  
+     FOR i=0L,n_elements(lst)-1 DO printf,unit,lst(i)
+     printf,unit,' '
+     counter=counter+1
+  end
+  
+  close,unit
+  free_lun,unit
+  message,'Wrote '+tex_file_name,/info
+
+  
+; diffcube chan maps
+  
+  caption='Difference Cube: Individual Channels of Matched Cube'
+  counter=1
+  allfiles=file_basename(file_search("plots/diffcube_chan*png"))
+  nfiles=n_elements(allfiles)
+  nfigs=ceil(nfiles/16.) ; we want 4x4 panels in each figure
+  start_idx=0 & end_idx=15
+
+  tex_file_name=use_reportdir+'diffcube_chanmaps_fig.tex'
+  openw,unit,tex_file_name,/get_lun
+
+  for k=0,nfigs-1 do begin
+     if counter gt 1 then caption=caption+' (cont.)'
+     label='fig:diffcube_chanmaps_'+strtrim(string(fix(counter)),2)
+     start_idx=start_idx+k*16
+     end_idx=end_idx+k*16
+     if end_idx ge nfiles then end_idx=nfiles-1
+     use_files=allfiles[start_idx:end_idx]
+     fig_st=make_latex_fig_structure(position=position,double_column=double_column,centering=centering, $
+                                    dimension_type=dimension_type,dimension_value=dimension_value,dimension_unit=dimension_unit, $
+                                    label=label,caption=caption,newpage=newpage,ps_file_names=use_files,_extra=_extra)
+     lst=latex_figst2figstr(fig_st)
+  
+     FOR i=0L,n_elements(lst)-1 DO printf,unit,lst(i)
+     printf,unit,' '
+     counter=counter+1
+  end
+  
+  close,unit
+  free_lun,unit
+  message,'Wrote '+tex_file_name,/info
+
+
+  
 ;================
 ;== Make the flux per channel figure
 ;================
