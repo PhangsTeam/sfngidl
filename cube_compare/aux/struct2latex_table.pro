@@ -38,6 +38,8 @@ IF N_PARAMS(0) NE 2 THEN BEGIN
   GOTO,sortie
 ENDIF
 
+
+
 struct2latex_table_sign='%This Latex table was generated automatically by struct2latex_table.pro on '+systime(0)
 use_caption='Caption here'
 IF keyword_set(caption) THEN use_caption=caption
@@ -137,7 +139,7 @@ use_st=st
 ;=== compute powers of 10 for numeric values
 ;=== and devide values to get mantisse
 Ntags=n_tags(st)
-p_of_10=fltarr(Nel,Ntags)+!indef
+p_of_10=fltarr(Nel,Ntags)+la_undef()
 ind=where(strmid(all_formats,0,1) EQ 'E',count)
 FOR j=0L,Nel-1 DO BEGIN
   FOR k=0,count-1 DO BEGIN
@@ -254,7 +256,7 @@ FOR j=0L,Nel-1 DO BEGIN
   IF keyword_set(indef_replace) THEN BEGIN
     FOR ii=0L,count_rep-1 DO BEGIN
       i=ind_rep(ii)
-      st_to_replace=string(!indef,format='('+all_formats(i)+')')
+      st_to_replace=string(la_undef(),format='('+all_formats(i)+')')
       st_to_replace=strtrim(st_to_replace,2)
       st_replaced='--'
       toto=textoidl_str_replace(try,st_to_replace,st_replaced)
