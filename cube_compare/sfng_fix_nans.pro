@@ -40,7 +40,7 @@ FUNCTION sfng_fix_nans,im,inhdr=inhdr,outhdr=outhdr,reverse=reverse,help=help,ve
      goto,the_end
   ENDIF
   
-  define_la_common
+  sfng_define_la_common
 
   imout=im
   if keyword_set(inhdr) then outhdr=inhdr
