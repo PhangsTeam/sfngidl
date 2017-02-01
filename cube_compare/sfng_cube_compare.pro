@@ -108,7 +108,8 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
 ;===================
 
   @sfng_constants.bat
-
+  sfng_define_la_common
+  
   ; things that user can change via keywords
   use_savefile='cubecmp_results.sav'
   use_c1file='IDL_CUBE1'
@@ -978,7 +979,7 @@ end
   emission_idx=where(c1_chanflux_jsm gt 0, emct)
   if emct gt 0 then begin
      emission_startchan=emission_idx[0]
-     emission_endchan=emission_idx[-1]
+     emission_endchan=emission_idx[emct-1] ; can't use -1 index for idl v7
   end
 
   
@@ -1005,7 +1006,8 @@ end
 
   chans=indgen(nchans)+1
   make_axes,c1hdr,vaxis=vchans,/vonly
-
+  
+  
 ;======================
 ; a. Flux per channel
 ;======================
@@ -1015,7 +1017,7 @@ end
   window,use_win,xsize=900,ysize=400 & use_win=use_win+1
   !p.position=[0.2,0.2,0.9,0.8]
   loadct,39 & fgcolor=255
-  xr=[0,nchans] & xr1=[vchans[0],vchans[-1]]
+  xr=[0,nchans] & xr1=[vchans[0],vchans[nchans-1]]
   ymax=max(c1_chanflux,/nan) > max(c2_chanflux,/nan)
   yr=[-0.1*ymax,1.1*ymax]
   tit='Input Cubes, Common FoV'
@@ -1046,7 +1048,7 @@ end
   
   window,use_win,xsize=900,ysize=400 & use_win=use_win+1
   !p.position=[0.2,0.2,0.9,0.8]
-  xr=[0,nchans] & xr1=[vchans[0],vchans[-1]]
+  xr=[0,nchans] & xr1=[vchans[0],vchans[nchans-1]]
   ymax=max(c1_chanflux,/nan) > max(c2_chanflux,/nan)
   yr=[-0.1*ymax,1.1*ymax]
   tit='Input Cubes, Common FoV, JointSigMask'
@@ -1202,7 +1204,7 @@ end
   window,use_win,xsize=900,ysize=400 & use_win=use_win+1
   !p.position=[0.2,0.2,0.9,0.8]
   loadct,39 & fgcolor=255
-  xr=[0,nchans] & xr1=[vchans[0],vchans[-1]]
+  xr=[0,nchans] & xr1=[vchans[0],vchans[nchans-1]]
 
   ymax=max(c1_chanfidel_jsm,/nan) > max(c2_chanfidel_jsm,/nan)
   yr=[-0.1*ymax,1.1*ymax]
