@@ -41,9 +41,11 @@ PRO sfng_compile_latex,cube_cmp_str,reportdir=reportdir,plotdir=plotdir $
  use_reportdir = './report/'
  use_tagname = 'galaxy'
  use_template = './sfng_cube_compare_pdftemplate.tex'
- use_datestr=strsplit(timestamp(/off),'.',/extract)
+; use_datestr=strsplit(timestamp(/off),'.',/extract)
+; use_datestr=STRJOIN(STRSPLIT(use_datestr[0], /EXTRACT,':'), '-')
+ use_datestr=strsplit(cgtimestamp(9),'.',/extract)
  use_datestr=STRJOIN(STRSPLIT(use_datestr[0], /EXTRACT,':'), '-')
- 
+
 ;===================
 ; process user inputs
 ;===================
@@ -71,7 +73,7 @@ PRO sfng_compile_latex,cube_cmp_str,reportdir=reportdir,plotdir=plotdir $
 ;=== copy the template latex file, adding the date
 ;===================
   file_in=use_template
-  file_out=use_reportdir+'sfng_cube_compare_'+use_tagname+'_'+use_datestr+'.tex'
+  file_out=use_reportdir+'sfng_cube_compare_'+use_tagname+use_datestr+'.tex'
   str='cp '+file_in+' '+file_out
   spawn,str
 
