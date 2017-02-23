@@ -338,7 +338,7 @@ figures_only:
   allfiles=file_basename(file_search("plots/joint*png"))
   nfiles=n_elements(allfiles)
   nfigs=ceil(nfiles/16.) ; we want 4x4 panels in each figure
-  start_idx=0 & end_idx=15
+  start_idx_i=0 & end_idx_i=15
 
   tex_file_name=use_reportdir+'emissionmask_chanmaps_fig.tex'
   openw,unit,tex_file_name,/get_lun
@@ -346,8 +346,8 @@ figures_only:
   for k=0,nfigs-1 do begin
      if counter gt 1 then caption=caption+' (cont.)'
      label='fig:jsm_chanmaps_'+strtrim(string(fix(counter)),2)
-     start_idx=start_idx+k*16
-     end_idx=end_idx+k*16
+     start_idx=start_idx_i+k*16
+     end_idx=end_idx_i+k*16
      if end_idx ge nfiles then end_idx=nfiles-1
      use_files=allfiles[start_idx:end_idx]
      fig_st=make_latex_fig_structure(position=position,double_column=double_column,centering=centering, $
@@ -372,7 +372,7 @@ figures_only:
   allfiles=file_basename(file_search("plots/c1_chan*png"))
   nfiles=n_elements(allfiles)
   nfigs=ceil(nfiles/16.) ; we want 4x4 panels in each figure
-  start_idx=0 & end_idx=15
+  start_idx_i=0 & end_idx_i=15
 
   tex_file_name=use_reportdir+'cube1_chanmaps_fig.tex'
   openw,unit,tex_file_name,/get_lun
@@ -380,8 +380,8 @@ figures_only:
   for k=0,nfigs-1 do begin
      if counter gt 1 then caption=caption+' (cont.)'
      label='fig:cube1_chanmaps_'+strtrim(string(fix(counter)),2)
-     start_idx=start_idx+k*16
-     end_idx=end_idx+k*16
+     start_idx=start_idx_i+k*16
+     end_idx=end_idx_i+k*16
      if end_idx ge nfiles then end_idx=nfiles-1
      use_files=allfiles[start_idx:end_idx]
      fig_st=make_latex_fig_structure(position=position,double_column=double_column,centering=centering, $
@@ -406,7 +406,7 @@ figures_only:
   allfiles=file_basename(file_search("plots/c1_chan*png"))
   nfiles=n_elements(allfiles)
   nfigs=ceil(nfiles/16.) ; we want 4x4 panels in each figure
-  start_idx=0 & end_idx=15
+  start_idx_i=0 & end_idx_i=15
 
   tex_file_name=use_reportdir+'cube2_chanmaps_fig.tex'
   openw,unit,tex_file_name,/get_lun
@@ -414,8 +414,8 @@ figures_only:
   for k=0,nfigs-1 do begin
      if counter gt 1 then caption=caption+' (cont.)'
      label='fig:cube2_chanmaps_'+strtrim(string(fix(counter)),2)
-     start_idx=start_idx+k*16
-     end_idx=end_idx+k*16
+     start_idx=start_idx_i+k*16
+     end_idx=end_idx_i+k*16
      if end_idx ge nfiles then end_idx=nfiles-1
      use_files=allfiles[start_idx:end_idx]
      fig_st=make_latex_fig_structure(position=position,double_column=double_column,centering=centering, $
@@ -440,7 +440,7 @@ figures_only:
   allfiles=file_basename(file_search("plots/diffcube_chan*png"))
   nfiles=n_elements(allfiles)
   nfigs=ceil(nfiles/16.) ; we want 4x4 panels in each figure
-  start_idx=0 & end_idx=15
+  start_idx_i=0 & end_idx_i=15
 
   tex_file_name=use_reportdir+'diffcube_chanmaps_fig.tex'
   openw,unit,tex_file_name,/get_lun
@@ -448,8 +448,8 @@ figures_only:
   for k=0,nfigs-1 do begin
      if counter gt 1 then caption=caption+' (cont.)'
      label='fig:diffcube_chanmaps_'+strtrim(string(fix(counter)),2)
-     start_idx=start_idx+k*16
-     end_idx=end_idx+k*16
+     start_idx=start_idx_i+k*16
+     end_idx=end_idx_i+k*16
      if end_idx ge nfiles then end_idx=nfiles-1
      use_files=allfiles[start_idx:end_idx]
      fig_st=make_latex_fig_structure(position=position,double_column=double_column,centering=centering, $
