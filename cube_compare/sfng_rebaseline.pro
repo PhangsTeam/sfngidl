@@ -141,7 +141,7 @@ pro sfng_rebaseline,datadir=datadir,fits_in=fits_in $
             0: begin
                offset=median(spec(usechans),/even)
                data_out[i,j,*]=spec-offset
-               blarray[i,j]=0
+               blflags[i,j]=0
                blcoeffs[i,j,0]=offset
             end
             1: begin
@@ -170,7 +170,7 @@ pro sfng_rebaseline,datadir=datadir,fits_in=fits_in $
                if n_elements(coeff) eq 3 then begin
                   blfit=coeff[0]+coeff[1]*x+coeff[2]*x2
                   data_out[i,j,*]=spec-blfit
-                  blflags[i,j]=12
+                  blflags[i,j]=2
                   blcoeffs[i,j,0]=coeff[0]
                   blcoeffs[i,j,1]=coeff[1]
                   blcoeffs[i,j,2]=coeff[2]
