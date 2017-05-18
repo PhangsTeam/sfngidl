@@ -8,7 +8,8 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
                       ,jy2k=jy2k, rebaseline=rebaseline $
                       ,xygrid=xygrid,vgrid=vgrid $
                       ,allchannels=allchannels $
-                      ,help=help,verbose=verbose,noreport=noreport,nostop=nostop 
+                      ,help=help,verbose=verbose,noreport=noreport,nostop=nostop $
+                      ,nice=nice
 
 ;+ NAME:
 ;     sfng_cube_compare
@@ -179,6 +180,19 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
   if do_report eq 1 and use_reportdir eq '' then $
      message,'Problem with report directory?'
 
+;==============
+; clean output directories
+;==============
+
+  message,'Removing old files from report directory: '+use_reportdir,/info
+  if keyword_set(nice) then stop
+  spawn, 'rm -f '+use_reportdir+'/*tex'
+  spawn, 'rm -f '+use_reportdir+'/*png'
+
+  message,'Removing old files from plots directory: '+use_plotdir,/info
+  if keyword_set(nice) then stop
+  spawn, 'rm -f '+use_plotdir+'/*png'
+  
 ;==============
 ; read data
 ;==============
@@ -360,7 +374,7 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
 ;====================
 
    if use_rebaseline[0] ne -1 then begin
-  
+      
 ; mask regions of strong signal before estimating new baselines
 ; we write FITS of signal mask explicitly to avoid make_cprops_mask
 ; throwing an error
@@ -436,7 +450,7 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
       ccmp_str.c2_comments=strjoin(c2_comments,';')
       
    end
-   
+
 ;==============
 ; generate noise map
 ;==============
@@ -1665,8 +1679,8 @@ save_structure:
 ;================
 
    if do_report eq 1 then begin
-      sfng_make_latex_elements,ccmp_str
-      sfng_compile_latex,ccmp_str
+      sfng_make_latex_elements,ccmp_str,reportdir=use_reportdir,plotdir=use_plotdir
+      sfng_compile_latex,ccmp_str,reportdir=use_reportdir,plotdir=use_plotdir
    end
 
    if keyword_set(verbose) then message,'Finished sfng_cube_compare.pro for '+use_c1file+' and '+use_c2file,/info

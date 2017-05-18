@@ -1,4 +1,6 @@
 PRO sfng_make_latex_elements,cube_cmp_str $
+                             ,reportdir=reportdir $
+                             ,plotdir=plotdir $
                              ,figures_only=figures_only $
                              ,tables_only=tables_only $
                              ,help=help,verbose=verbose
@@ -335,7 +337,7 @@ figures_only:
   
   caption='Joint Emission Mask: Individual Channels'
   counter=1
-  allfiles=file_basename(file_search("plots/joint*png"))
+  allfiles=file_basename(file_search(use_plotdir+"/joint*png"))
   nfiles=n_elements(allfiles)
   nfigs=ceil(nfiles/16.) ; we want 4x4 panels in each figure
   start_idx_i=0 & end_idx_i=15
@@ -369,7 +371,7 @@ figures_only:
   
   caption='Cube 1: Individual Channels of Matched Cube'
   counter=1
-  allfiles=file_basename(file_search("plots/c1_chan*png"))
+  allfiles=file_basename(file_search(use_plotdir+"/c1_chan*png"))
   nfiles=n_elements(allfiles)
   nfigs=ceil(nfiles/16.) ; we want 4x4 panels in each figure
   start_idx_i=0 & end_idx_i=15
@@ -403,7 +405,7 @@ figures_only:
   
   caption='Cube 2: Individual Channels of Matched Cube'
   counter=1
-  allfiles=file_basename(file_search("plots/c1_chan*png"))
+  allfiles=file_basename(file_search(use_plotdir+"/c2_chan*png"))
   nfiles=n_elements(allfiles)
   nfigs=ceil(nfiles/16.) ; we want 4x4 panels in each figure
   start_idx_i=0 & end_idx_i=15
@@ -437,7 +439,7 @@ figures_only:
   
   caption='Difference Cube: Individual Channels of Matched Cube'
   counter=1
-  allfiles=file_basename(file_search("plots/diffcube_chan*png"))
+  allfiles=file_basename(file_search(use_plotdir+"/diffcube_chan*png"))
   nfiles=n_elements(allfiles)
   nfigs=ceil(nfiles/16.) ; we want 4x4 panels in each figure
   start_idx_i=0 & end_idx_i=15
