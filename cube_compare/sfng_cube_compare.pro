@@ -66,13 +66,16 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
 ;     nostop = exit the routine when finished. If not set, execution
 ;              will pause just before return statement at end of routine.
 ;     allchannels = produce channel maps for all channels. Default is
-;     to use the channels with emission, with a 20km/s margin on each side.
+;              to use the channels with emission, with a 20km/s margin
+;              on each side.
+;     nice  =  pause before deleting existing .png and .tex files in
+;              the plots and report directories
 ; EXAMPLES
 ;       sfng_cube_compare,datadir=use_datadir,outdir=use_outdir,plotdir=use_plotdir $
 ;                    ,reportdir=use_reportdir,savedir=use_savedir $
 ;                    , fits_in1=use_c1file,fits_in2=use_c2file,savefile=use_savefile $
 ;                    , xygrid=2,vgrid=1,jy2k=[0,1],rebaseline=[1,1],expand_mask_edges=[5,2] $
-;                    , target_beam=[30.,30.,0],/verb
+;                    , target_beam=[30.,30.,0],/verb,/nice
 ; OUTPUTS:
 ;     savefile = IDL save file with structure containing results of comparison
 ;     Plots (in plotdir) and, if requested, a summary report (in reportdir)
