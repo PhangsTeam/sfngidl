@@ -1,8 +1,9 @@
 PRO struct2latex_table,st,fileout,exp_accur=exp_accur,silent=silent,formats=formats,indef_replace=indef_replace, $
                        error_st=error_st,use_all_format=use_all_format,erindex=erindex,parents=parents, $
-                       replace_from=replace_from,replace_to=replace_to,nowrite=nowrite,caption=caption, label=label, $
-                       replace_tagnames_only=replace_tagnames_only,small=small,tiny=tiny,landscape=landscape, units=units, $
-                       forcepos=forcepos
+                       replace_from=replace_from,replace_to=replace_to,nowrite=nowrite,caption=caption, $
+                       replace_tagnames_only=replace_tagnames_only,small=small,tiny=tiny,landscape=landscape, $
+                       long=long, units=units,forcepos=forcepos,label=label
+
 
 ;+
 ; NAME:
@@ -37,8 +38,6 @@ IF N_PARAMS(0) NE 2 THEN BEGIN
   print,"Accepted Key-Words: [exp_accur=][formats=['','',...]][/silent][/indef_replace][,erindex=,error_st=][use_all_format=''][,/parents][replace_from=,replace_to=]"
   GOTO,sortie
 ENDIF
-
-
 
 struct2latex_table_sign='%This Latex table was generated automatically by struct2latex_table.pro on '+systime(0)
 use_caption='Caption here'
@@ -139,7 +138,7 @@ use_st=st
 ;=== compute powers of 10 for numeric values
 ;=== and devide values to get mantisse
 Ntags=n_tags(st)
-p_of_10=fltarr(Nel,Ntags)+la_undef()
+p_of_10=fltarr(Nel,Ntags)+!indef
 ind=where(strmid(all_formats,0,1) EQ 'E',count)
 FOR j=0L,Nel-1 DO BEGIN
   FOR k=0,count-1 DO BEGIN
@@ -256,7 +255,7 @@ FOR j=0L,Nel-1 DO BEGIN
   IF keyword_set(indef_replace) THEN BEGIN
     FOR ii=0L,count_rep-1 DO BEGIN
       i=ind_rep(ii)
-      st_to_replace=string(la_undef(),format='('+all_formats(i)+')')
+      st_to_replace=string(!indef,format='('+all_formats(i)+')')
       st_to_replace=strtrim(st_to_replace,2)
       st_replaced='--'
       toto=textoidl_str_replace(try,st_to_replace,st_replaced)
@@ -297,27 +296,47 @@ FOR i=0L,Ncol-1 DO BEGIN
 ENDFOR
 col_form=col_form+'|'
 tab_header=[struct2latex_table_sign]
-IF keyword_set(landscape) THEN BEGIN
-  tab_header=[tab_header,'\begin{landscape}']
-ENDIF  
+   IF keyword_set(landscape) THEN BEGIN
+      tab_header=[tab_header,'\begin{landscape}']
+   ENDIF  
 
-;tab_header=[tab_header,'\begin{table}']
-use_beginstr='\begin{table}'
-if keyword_set(forcepos) then use_beginstr='\begin{table}[H]'
-tab_header=[tab_header,use_beginstr]
+; REGULAR TABLE
+IF NOT KEYWORD_SET(LONG) THEN BEGIN
+   use_beginstr='\begin{table}'
+   if keyword_set(forcepos) then use_beginstr='\begin{table}[H]'
+   tab_header=[tab_header,use_beginstr]
+   IF keyword_set(small) THEN BEGIN
+      tab_header=[tab_header,'{\small']
+   ENDIF
+   IF keyword_set(tiny) THEN BEGIN
+      tab_header=[tab_header,'{\tiny']
+   ENDIF
+   tab_header=[tab_header, $
+               '\caption[ ]{\label{'+use_label+'} '+use_caption+'}', $
+               '\begin{flushleft}', $
+               '\begin{tabular}{'+col_form+'}', $
+               '\hline', $
+               '\hline']
+END
+; LONGTABLE -- REQUIRED IF BREAKING OVER MULTIPLE PAGES
+IF KEYWORD_SET(LONG) THEN BEGIN
+   use_beginstr='\begin{longtable}'
+   if keyword_set(forcepos) then use_beginstr='\begin{longtable}[H]'
 
-IF keyword_set(small) THEN BEGIN
-  tab_header=[tab_header,'{\small']
-ENDIF
-IF keyword_set(tiny) THEN BEGIN
-  tab_header=[tab_header,'{\tiny']
-ENDIF
-tab_header=[tab_header, $
-'\caption[ ]{\label{'+use_label+'} '+use_caption+'}', $
-'\begin{flushleft}', $
-'\begin{tabular}{'+col_form+'}', $
-'\hline', $
-'\hline']
+   IF keyword_set(small) THEN BEGIN
+      tab_header=[tab_header,'{\small']
+   ENDIF
+   IF keyword_set(tiny) THEN BEGIN
+      tab_header=[tab_header,'{\tiny']
+   ENDIF
+   tab_header=[tab_header,use_beginstr+'{'+col_form+'}']
+   tab_header=[tab_header, $
+               '\caption[ ]{\label{'+use_label+'} '+use_caption+'} \\ ', $
+               '\hline', $
+               '\hline']
+END
+
+
 col_names=tag_names(st)
 ;=== Check if name contains _ symbols
 FOR i=0L,Ncol-1 DO BEGIN
@@ -353,21 +372,40 @@ IF keyword_set(units) THEN BEGIN
 ENDIF
 toto=[tab_header,tab_col_names,tab_units,'\hline']
 tab_header=toto
-tab_trailer=[ $
-'\hline', $
-'\end{tabular}', $
-'\end{flushleft}', $
-' ', $
-'%$^\dag$ insert table footnotes there', $
-' ']
-IF keyword_set(small) THEN BEGIN
-  tab_trailer=[tab_trailer,'}']
-ENDIF
-IF keyword_set(tiny) THEN BEGIN
-  tab_trailer=[tab_trailer,'}']
-ENDIF
-tab_trailer=[tab_trailer, $
-'\end{table}']
+
+IF NOT KEYWORD_SET(LONG) THEN BEGIN
+   tab_trailer=[ $
+               '\hline', $
+               '\end{tabular}', $
+               '\end{flushleft}', $
+               ' ', $
+               '%$^\dag$ insert table footnotes there', $
+               ' ']
+   IF keyword_set(small) THEN BEGIN
+      tab_trailer=[tab_trailer,'}']
+   ENDIF
+   IF keyword_set(tiny) THEN BEGIN
+      tab_trailer=[tab_trailer,'}']
+   ENDIF
+   tab_trailer=[tab_trailer, $
+                '\end{table}']
+END
+IF KEYWORD_SET(LONG) THEN BEGIN
+   tab_trailer=[ $
+               '\hline', $
+               ' ', $
+               '%$^\dag$ insert table footnotes there', $
+               ' ']
+   tab_trailer=[tab_trailer, $
+                '\end{longtable}']
+   IF keyword_set(small) THEN BEGIN
+      tab_trailer=[tab_trailer,'}']
+   ENDIF
+   IF keyword_set(tiny) THEN BEGIN
+      tab_trailer=[tab_trailer,'}']
+   ENDIF
+END
+
 IF keyword_set(landscape) THEN BEGIN
   tab_trailer=[tab_trailer,'\end{landscape}']
 ENDIF  
