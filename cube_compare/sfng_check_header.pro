@@ -218,6 +218,7 @@ function sfng_check_header, hdr = hdr $
   endelse
 
   channel = abs(sxpar(hdr, "CDELT3", count=cdelt_ct))
+  cdelt3 = sxpar(hdr, "CDELT3", count=cdelt_ct)
   vel0 = abs(sxpar(hdr, "CRVAL3", count=crval3_ct))
   if cdelt_ct eq 0 or crval3_ct eq 0 then begin
      pass = 0
@@ -228,8 +229,9 @@ function sfng_check_header, hdr = hdr $
         if do_fix eq 1 then begin
            comments = [comments, "Assuming m/s and converting to km/s"]
            channel=channel/1000.
+           cdelt3=cdelt3/1000.
            vel0=vel0/1000.
-           sxaddpar,fixhdr,'CDELT3',channel,'Modified CDELT3: assuming m/s and converting to km/s'
+           sxaddpar,fixhdr,'CDELT3',cdelt3,'Modified CDELT3: assuming m/s and converting to km/s'
            sxaddpar,fixhdr,'HISTORY','Modified CDELT3: assuming m/s and converting to km/s'
            sxaddpar,fixhdr,'CRVAL3',vel0,'Modified CRVAL3: assuming m/s and converting to km/s'
            sxaddpar,fixhdr,'HISTORY','Modified CRVAL3: assuming m/s and converting to km/s'
@@ -237,6 +239,11 @@ function sfng_check_header, hdr = hdr $
      endif
      chanw=channel
      channel_str=strtrim(string(channel),2)
+     make_axes,fixhdr,vaxis=vaxis,/vonly
+     nchans=n_elements(vaxis)
+     startv_str=strtrim(string(vaxis[0]),2)
+     endv_str=strtrim(string(vaxis[nchans-1]),2)
+     comments = [comments, "Velocity in start/end channel: "+startv_str+","+endv_str]
      comments = [comments, "Channel width is "+channel_str]     
   endelse
 
