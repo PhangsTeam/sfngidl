@@ -69,7 +69,8 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
 ;              to use the channels with emission, with a 20km/s margin
 ;              on each side.
 ;     nice  =  pause before deleting existing .png and .tex files in
-;              the plots and report directories
+;              the plots and report directories. Pause to review
+;              header information
 ; EXAMPLES
 ;       sfng_cube_compare,datadir=use_datadir,outdir=use_outdir,plotdir=use_plotdir $
 ;                    ,reportdir=use_reportdir,savedir=use_savedir $
@@ -264,8 +265,11 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
   ccmp_str.c2_dims=size(c2,/dim)
   
   if pass1 ne 1 or pass2 ne 1 then begin
-     print,'Headers did not pass sfng_check_header. Check logs, then .c to continue'
-     stop
+     print,'Headers did not pass sfng_check_header.'
+     if keyword_set(nice) then begin
+        print,'Check logs, then .c to continue'
+        stop
+     end
   end
      
   c1hdr = c1hdr_fix
@@ -852,7 +856,6 @@ end
   fidelcube_c1=abs(c1)/(abs(diffcube) > fidel_rmsfactor)
   fidelcube_c2=abs(c2)/(abs(diffcube) > fidel_rmsfactor)
 
-  
   use_fidelidx_c1=where(finite(fidelcube_c1) and joint_sigmask eq 1,fct1)
   if fct1 gt 0 then fidel_vec_c1 = fidelcube_c1[use_fidelidx_c1]
   fidel_vec_c1=fidel_vec_c1[sort(fidel_vec_c1)]
