@@ -283,28 +283,29 @@ if use_operation eq 'VELOCITY' then begin
                       , outcube = d1v, outhdr= h1_out, operation=use_operation
 
       d1=d1v
-        new_crval3=sxpar(h1_out,'CRVAL3')
-        new_ctype3=sxpar(h1_out,'CTYPE3')
-        new_cdelt3=sxpar(h1_out,'CDELT3')
-        new_naxis3=sxpar(h1_out,'NAXIS3')
-        new_cunit3=sxpar(h1_out,'CUNIT3')
-        new_crpix3=sxpar(h1_out,'CRPIX3')
-        new_specsys=sxpar(h1_out,'SPECSYS')
-        sxaddpar,h1,'CRVAL3',new_crval3,'CUBE_HASTROM: regridded velocity axis'
-        sxaddpar,h1,'CTYPE3',new_ctype3,'CUBE_HASTROM: regridded velocity axis'
-        sxaddpar,h1,'CDELT3',new_cdelt3,'CUBE_HASTROM: regridded velocity axis'
-        sxaddpar,h1,'NAXIS3',new_naxis3,'CUBE_HASTROM: regridded velocity axis'
-        sxaddpar,h1,'CUNIT3',new_cunit3,'CUBE_HASTROM: regridded velocity axis'
-        sxaddpar,h1,'CRPIX3',new_crpix3,'CUBE_HASTROM: regridded velocity axis'
-        sxaddpar,h1,'SPECSYS',new_specsys,'CUBE_HASTROM: regridded velocity axis'
-        
-        if keyword_set(fits_in2) then sxaddpar,h1,'HISTORY','Regridded velocity axis using template: ',fits_in2
-        if not keyword_set(fits_in2) then sxaddpar,h1,'HISTORY','Regridded velocity axis using template'
+      new_crval3=sxpar(h1_out,'CRVAL3')
+      new_ctype3=sxpar(h1_out,'CTYPE3')
+      new_cdelt3=sxpar(h1_out,'CDELT3')
+      new_naxis3=sxpar(h1_out,'NAXIS3')
+      new_cunit3=sxpar(h1_out,'CUNIT3')
+      new_crpix3=sxpar(h1_out,'CRPIX3')
+      new_specsys=sxpar(h1_out,'SPECSYS')
+      sxaddpar,h1,'CRVAL3',new_crval3,'CUBE_HASTROM: regridded velocity axis'
+      sxaddpar,h1,'CTYPE3',new_ctype3,'CUBE_HASTROM: regridded velocity axis'
+      sxaddpar,h1,'CDELT3',new_cdelt3,'CUBE_HASTROM: regridded velocity axis'
+      sxaddpar,h1,'NAXIS3',new_naxis3,'CUBE_HASTROM: regridded velocity axis'
+      sxaddpar,h1,'CUNIT3',new_cunit3,'CUBE_HASTROM: regridded velocity axis'
+      sxaddpar,h1,'CRPIX3',new_crpix3,'CUBE_HASTROM: regridded velocity axis'
+      sxaddpar,h1,'SPECSYS',new_specsys,'CUBE_HASTROM: regridded velocity axis'
+      
+      if keyword_set(fits_in2) then sxaddpar,h1,'HISTORY','Regridded velocity axis using template: ',fits_in2
+      if not keyword_set(fits_in2) then sxaddpar,h1,'HISTORY','Regridded velocity axis using template'
 
-     end else if use_vgrid_master eq 1 then begin
+   end else if use_vgrid_master eq 1 then begin
 
-        cube_hastrom, data=d2, hdr_in = h2, target_hdr=h1 $
-                      , outcube = d2v, outhdr= h2_out, operation=use_operation
+      
+      cube_hastrom, data=d2, hdr_in = h2, target_hdr=h1 $
+                    , outcube = d2v, outhdr= h2_out, operation=use_operation
         d2=d2v
         new_crval3=sxpar(h2_out,'CRVAL3')
         new_ctype3=sxpar(h2_out,'CTYPE3')
@@ -366,6 +367,8 @@ if use_operation eq 'VELOCITY' then begin
 
              cube_hastrom, data=d1, hdr_in = h1, target_hdr=h2 $
                            , outcube = d1v, outhdr= h1_out, operation='VELOCITY'
+
+             
              d1=d1v
              new_crval3=sxpar(h1_out,'CRVAL3')
              new_ctype3=sxpar(h1_out,'CTYPE3')

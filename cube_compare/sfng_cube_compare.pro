@@ -2,6 +2,7 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
                       ,fits_in1=fits_in1,fits_in2=fits_in2 $
                       ,idl_in1=idl_in1,idl_in2=idl_in2 $
                       ,hdr_in1=hdr_in1,hdr_in2=hdr_in2 $
+                      ,c1_name=c1_name,c2_name=c2_name $
                       ,savedir=savedir,savefile=savefile,tagname=tagname $
                       ,galaxy=galaxy, line_frequency=line_frequency, target_beam=target_beam $
                       ,expand_mask_edges=expand_mask_edges $
@@ -57,7 +58,7 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
 ;     expand_mask_edges: two-element vector indicating # pixels and #
 ;                        of channels by which to reduce the comparison
 ;                        region. Default is zero (i.e. use observed
-;                        FoV that is xommon to both cubes) 
+;                        FoV that is common to both cubes) 
 ; ACCEPTED KEY-WORDS:
 ;     help = print this help
 ;     verbose = print extra information to screen
@@ -143,9 +144,11 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
   nan=!values.f_nan
   ms2kms=1/1000.d
   kms2ms=1000.d
+  Mpc_on_AU=1.e6/206265.
   use_c1str='CUBE1'
   use_c2str='CUBE2'
 
+  
 ;===================
 ; process user inputs
 ;===================
@@ -167,7 +170,9 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
   if keyword_set(allchannels) then use_allchannels = 1
   if keyword_set(jy2k) then do_jy2k = jy2k
   if keyword_set(rebaseline) then use_rebaseline = rebaseline
-  
+  if keyword_set(c1_name) then use_c1str=c1_name
+  if keyword_set(c2_name) then use_c2str=c2_name
+
 ;===================
 ; enforce final back slash and make sure directories exist
 ;===================
@@ -224,6 +229,14 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
   ccmp_str=sfng_empty_cubecmp_str()
   ccmp_str.c1_file=use_c1file
   ccmp_str.c2_file=use_c2file
+
+;==============
+; initialise galaxy information if set
+;==============
+
+  if keyword_set(use_galaxy) then $
+     gstr=gal_data(use_galaxy)
+
   
 ;==============
 ; check header information
@@ -249,6 +262,7 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
      print,'&%&%&%&%&%&%&% CUBE 2 &%&%&%&%&%&%&%'
      print, c2_comments, format='(a)'
      print,'&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%'
+;     stop
   end
         
   ccmp_str.c1_comments=strjoin(c1_comments,';')
@@ -1047,7 +1061,7 @@ end
   cgplot,chans,chans*0,lines=1,/overplot
   cgplot,chans,c1_chanflux,color=cgcolor('red'),psym=10,thick=2,/overplot
   cgplot,chans,c2_chanflux,color=cgcolor('blue'),psym=10,thick=2,/overplot
-  cgaxis,/xaxis,xr=xr1,tit='Velocity [km/s]',charthick=1.8,charsize=1.5,xthick=2
+  cgaxis,/xaxis,xr=xr1,tit='Velocity [km/s]',charthick=1.8,charsize=1.5,xthick=2,xstyle=1
   
   al_legend,/top,/left,clear=0, box=0 $
             , [tit, $
@@ -1060,8 +1074,47 @@ end
 
   write_png,use_plotdir+use_pngfile,TVRD(/TRUE)
 
+  
 ;======================
-; b. Flux within joint signal mask per channel
+; b. luminosity per channel -- only done if we know galaxy distance
+;======================
+
+  if keyword_set(use_galaxy) then begin
+     use_pngfile='luminosity_per_channel.png'
+     
+     c1_chanlum=c1_chanflux*pixscale_as*pixscale_as*gstr.dist_mpc*gstr.dist_mpc*Mpc_on_AU*Mpc_on_AU
+     c2_chanlum=c2_chanflux*pixscale_as*pixscale_as*gstr.dist_mpc*gstr.dist_mpc*Mpc_on_AU*Mpc_on_AU
+
+     window,use_win,xsize=900,ysize=400 & use_win=use_win+1
+     !p.position=[0.2,0.2,0.9,0.8]
+     loadct,39 & fgcolor=255
+     xr=[0,nchans] & xr1=[vchans[0],vchans[nchans-1]]
+     ymax=max(c1_chanlum,/nan) > max(c2_chanlum,/nan)
+     yr=[-0.1*ymax,1.1*ymax]
+     tit='Input Cubes, Common FoV'
+     
+     cgplot,chans,c1_chanlum,xtit='Chans',ytit='Luminosity [K pc2]',charsize=1.5,color=fgcolor,charthick=1.8 $
+            ,/nodata,xstyle=8,/ysty,yr=yr,xr=xr,xthick=2,ythick=2,thick=2
+     cgplot,chans,chans*0,lines=1,/overplot
+     cgplot,chans,c1_chanlum,color=cgcolor('red'),psym=10,thick=2,/overplot
+     cgplot,chans,c2_chanlum,color=cgcolor('blue'),psym=10,thick=2,/overplot
+     cgaxis,/xaxis,xr=xr1,tit='Velocity [km/s]',charthick=1.8,charsize=1.5,xthick=2,xstyle=1
+     
+     al_legend,/top,/left,clear=0, box=0 $
+               , [tit, $
+               use_c1str, $
+                  use_c2str] $
+               ,lines=[-99,0,0] $
+               ,colors=[fgcolor,cgcolor('red'),cgcolor('blue')] $
+               ,charsize=1.,thick=2,charthick=1.8
+     
+     
+     write_png,use_plotdir+use_pngfile,TVRD(/TRUE)
+     
+  end
+  
+;======================
+; c. Flux within joint signal mask per channel
 ;======================
 
   use_pngfile='flux_per_channel_jointsignalmask.png'
@@ -1078,7 +1131,7 @@ end
   cgplot,chans,chans*0,lines=1,/overplot
   cgplot,chans,c1_chanflux_jsm,color=cgcolor('red'),psym=10,thick=2,/overplot
   cgplot,chans,c2_chanflux_jsm,color=cgcolor('blue'),psym=10,thick=2,/overplot
-  cgaxis,/xaxis,xr=xr1,tit='Velocity [km/s]',charthick=1.8,charsize=1.5,xthick=2
+  cgaxis,/xaxis,xr=xr1,tit='Velocity [km/s]',charthick=1.8,charsize=1.5,xthick=2,xstyle=1
   
   al_legend,/top,/left,clear=0, box=0 $
             , [tit, $
@@ -1092,7 +1145,7 @@ end
   write_png,use_plotdir+use_pngfile,TVRD(/TRUE)
 
 ;======================
-; c. Flux difference per channel
+; d. Flux difference per channel
 ;======================
 
   use_pngfile='diffcube_flux_per_channel.png'
@@ -1109,7 +1162,7 @@ end
        ,/nodata,xstyle=8,/ysty,yr=yr,xr=xr,xthick=2,ythick=2,thick=2
   cgplot,chans,chans*0,lines=1,/overplot
   cgplot,chans,diff_chanflux,psym=10,thick=2,/overplot
-  cgaxis,/xaxis,xr=xr1,tit='Velocity [km/s]',charthick=1.8,charsize=1.5,xthick=2
+  cgaxis,/xaxis,xr=xr1,tit='Velocity [km/s]',charthick=1.8,charsize=1.5,xthick=2,xstyle=1
   
   al_legend,/bottom,/left,clear=0, box=0 $
             , [tit, $
@@ -1119,8 +1172,41 @@ end
 
   write_png,use_plotdir+use_pngfile,TVRD(/TRUE)
 
+  ;======================
+; e. Relative Flux difference per channel
 ;======================
-; d. Flux difference per channel inside the joint signal mask
+
+  use_pngfile='diffcube_relflux_per_channel.png'
+
+  window,use_win,xsize=900,ysize=400 & use_win=use_win+1
+  ymax=max(diff_chanflux/c1_chanflux,/nan)
+  ymin=min(diff_chanflux/c1_chanflux,/nan)
+  
+  if ymin lt 0 then yr=[1.1*ymin,1.1*ymax]
+  if ymin ge 0 then yr=[0.8*ymin,1.1*ymax]
+  tit='Relative Difference Cube, Common FoV'
+
+  yr=[-0.5,0.5]
+  
+  cgplot,chans,diff_chanflux/float(c1_chanflux),xtit='Channel number',ytit='[Cube1 - Cube2]/Cube 1',charsize=1.5,color=fgcolor,charthick=1.8,/nodata,xstyle=8,/ysty,yr=yr,xr=xr,xthick=2,ythick=2,thick=2
+  cgplot,chans,chans*0,lines=1,/overplot
+  cgplot,chans,chans*0+0.25,lines=1,/overplot
+  cgplot,chans,chans*0-0.25,lines=1,/overplot
+  cgplot,chans,diff_chanflux/float(c1_chanflux),psym=10,thick=2,/overplot
+  cgaxis,/xaxis,xr=xr1,tit='Velocity [km/s]',charthick=1.8,charsize=1.5,xthick=2,xstyle=1
+  
+  al_legend,/bottom,/left,clear=0, box=0 $
+            , [tit, $
+               '(C1-C2)/C1'] $
+            ,lines=[-99,0] $
+            ,charsize=1.,thick=2,charthick=1.8
+
+  write_png,use_plotdir+use_pngfile,TVRD(/TRUE)
+
+;  stop
+
+;======================
+; f. Flux difference per channel inside the joint signal mask
 ;======================
 
   use_pngfile='diffcube_flux_per_channel_jointsignalmask.png'
@@ -1137,7 +1223,7 @@ end
        ,/nodata,xstyle=8,/ysty,yr=yr,xr=xr,xthick=2,ythick=2,thick=2
   cgplot,chans,chans*0,lines=1,/overplot
   cgplot,chans,diff_chanflux_jsm,psym=10,thick=2,/overplot
-  cgaxis,/xaxis,xr=xr1,tit='Velocity [km/s]',charthick=1.8,charsize=1.5,xthick=2
+  cgaxis,/xaxis,xr=xr1,tit='Velocity [km/s]',charthick=1.8,charsize=1.5,xthick=2,xstyle=1
   
   al_legend,/bottom,/left,clear=0, box=0 $
             , [tit, $
@@ -1166,7 +1252,7 @@ end
   cgplot,chans,chans*0,lines=1,/overplot
   cgplot,chans,c1_chanrms,color=cgcolor('red'),psym=10,thick=2,/overplot
   cgplot,chans,c2_chanrms,color=cgcolor('blue'),psym=10,thick=2,/overplot
-  cgaxis,/xaxis,xr=xr1,tit='Velocity [km/s]',charthick=1.8,charsize=1.5,xthick=2
+  cgaxis,/xaxis,xr=xr1,tit='Velocity [km/s]',charthick=1.8,charsize=1.5,xthick=2,xstyle=1
 
   
   al_legend,/bottom,/left,clear=0, box=0 $
@@ -1201,7 +1287,7 @@ end
   cgplot,chans,chans*0,lines=1,/overplot
   cgplot,chans,c1_chanrms_nosm,color=cgcolor('red'),psym=10,thick=2,/overplot
   cgplot,chans,c2_chanrms_nosm,color=cgcolor('blue'),psym=10,thick=2,/overplot
-  cgaxis,/xaxis,xr=xr1,tit='Velocity [km/s]',charthick=1.8,charsize=1.5,xthick=2
+  cgaxis,/xaxis,xr=xr1,tit='Velocity [km/s]',charthick=1.8,charsize=1.5,xthick=2,xstyle=1
 
   
   al_legend,/bottom,/left,clear=0, box=0 $
@@ -1235,7 +1321,7 @@ end
   cgplot,chans,chans*0,lines=1,/overplot
   cgplot,chans,c1_chanfidel_jsm,color=cgcolor('red'),psym=10,thick=2,/overplot
   cgplot,chans,c2_chanfidel_jsm,color=cgcolor('blue'),psym=10,thick=2,/overplot
-  cgaxis,/xaxis,xr=xr1,tit='Velocity [km/s]',charthick=1.8,charsize=1.5,xthick=2
+  cgaxis,/xaxis,xr=xr1,tit='Velocity [km/s]',charthick=1.8,charsize=1.5,xthick=2,xstyle=1
   
   al_legend,/top,/left,clear=0, box=0 $
             , [tit, $

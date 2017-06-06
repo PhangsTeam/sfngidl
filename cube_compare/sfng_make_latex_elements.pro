@@ -530,6 +530,21 @@ figures_only:
   free_lun,unit
   message,'Wrote '+tex_file_name,/info
 
+  ; relative flux in diffcube
+  file='diffcube_relflux_per_channel.png'
+  caption='Relative Flux per channel in difference cube'
+  label='fig:diffcube_relflux_per_chan'
+  tex_file_name=use_reportdir+'diffcube_relflux_perchannel_fig.tex'
+  fig_st=make_latex_fig_structure(position=position,double_column=double_column,centering=centering, $
+                                    dimension_type=dimension_type,dimension_value=dimension_value,dimension_unit=dimension_unit, $
+                                    label=label,caption=caption,newpage=newpage,ps_file_names=file,_extra=_extra)
+  lst=latex_figst2figstr(fig_st,show=show)
+  openw,unit,tex_file_name,/get_lun
+  FOR i=0L,n_elements(lst)-1 DO printf,unit,lst(i)
+  close,unit
+  free_lun,unit
+  message,'Wrote '+tex_file_name,/info
+
   ; diffcube -- inside joint signal mask
   file='diffcube_flux_per_channel_jointsignalmask.png'
   caption='Flux per channel in difference cube inside the region where signal is identified in both cubes'
