@@ -1,4 +1,4 @@
-pro sfng_convolve_to_res, idl_in=idl_in, hdr_in=hdr_in $
+pro sfng_convolve_to_res, idl_in=idl_in, hdr_in=hdr_in, hdr_out=hdr_out, idl_out=idl_out $
                           , fits_in=fits_in, fits_out=fits_out $
                           , galaxy=galaxy $
                           , target_res=target_res $
@@ -26,6 +26,7 @@ pro sfng_convolve_to_res, idl_in=idl_in, hdr_in=hdr_in $
 ;     idl_in = input cube 
 ;     hdr_in = FITS header of input cube
 ;     fits_out = prefix of filename of output cube. 
+;     idl_out = convolved cube
 ; OPTIONAL INPUT:
 ;     datadir    = directory for input FITS files. Defaults to
 ;                  current directory.
@@ -268,16 +269,16 @@ pro sfng_convolve_to_res, idl_in=idl_in, hdr_in=hdr_in $
            , data = data_in $
            , hdr = hdr $
            , out_data = data_out $
-           , out_hdr = hdr_out $
+           , out_hdr = out_hdr $
            , target_beam=target_beams[j]*[1.*1.] $
            , perbeam=use_perbeam
         
         sxaddpar,hdr_out,'DATAMAX',max(data_out,/nan)
         sxaddpar,hdr_out,'DATAMIN',min(data_out,/nan)
-        writefits,use_outdir+use_outname,data_out,hdr_out
+        writefits,use_outdir+use_outname,data_out,out_hdr
         
         data_in=data_out
-        hdr=hdr_out             ; smooth incrementally
+        hdr=out_hdr            ; smooth incrementally
 
      end                        ; of loop
      
@@ -288,6 +289,9 @@ pro sfng_convolve_to_res, idl_in=idl_in, hdr_in=hdr_in $
      print,'No good target beams for input dataset found. (Requested scales are smaller than current image resolution).'
   end
 
+  idl_out=data_out
+  hdr_out=out_hdr
+  
   the_end:
   return
   stop
