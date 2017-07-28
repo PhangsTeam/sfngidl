@@ -134,6 +134,8 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
   use_vgrid=1 ; which cube is master for channelisation?
   do_report=1
   use_allchannels=0
+  use_c1str='CUBE1'
+  use_c2str='CUBE2'
 
   ; things that user can change here 
   use_win = 0L
@@ -145,9 +147,7 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
   ms2kms=1/1000.d
   kms2ms=1000.d
   Mpc_on_AU=1.e6/206265.
-  use_c1str='CUBE1'
-  use_c2str='CUBE2'
-
+  use_binsize_2dfactor=20.
   
 ;===================
 ; process user inputs
@@ -221,7 +221,7 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
      message,'Problem with input data and/or header information',/info
      goto, the_end
   end
-  
+
 ;==============
 ; initalize the results structure
 ;==============
@@ -237,7 +237,6 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
   if keyword_set(use_galaxy) then $
      gstr=gal_data(use_galaxy)
 
-  
 ;==============
 ; check header information
 ; verify that units are K, km/s, and that cubes have beam and grid information in header.
@@ -291,7 +290,6 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
   
   writefits,use_outdir+use_c1file+'.fixhdr.fits',c1,c1hdr
   writefits,use_outdir+use_c2file+'.fixhdr.fits',c2,c2hdr
-  
 
 ;==============
 ; convert to K from Jy/beam
@@ -329,7 +327,7 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
 ;==============
 ; match the cubes -- resolution and gridding parameters
 ;==============
-  
+
    sfng_match_cubes,idl_in1=c1,idl_in2=c2,hdr_in1=c1hdr,hdr_in2=c2hdr $
                     ,idl_out1=c1match,idl_out2=c2match,hdr_out1=c1hdr_out,hdr_out2=c2hdr_out $
                    ,xygrid_master=use_xygrid,vgrid_master=use_vgrid,target_beam=use_target_beam,/round $
@@ -354,7 +352,7 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
 
    c1_comments=[c1_comments,'Regridded and brought to matching resolution']
    c1_comments=[c1_comments,'Pixscale is now [as]: '+strtrim(string(abs(match_cdelt1)*3600.),2)]
-   c1_comments=[c1_comments,'Channel width is now [k/s]: '+strtrim(string(match_cdelt3),2)]
+   c1_comments=[c1_comments,'Channel width is now [km/s]: '+strtrim(string(match_cdelt3),2)]
    c1_comments=[c1_comments,'Resolution is now [as]: '+strtrim(string(abs(match_bmaj)*3600.),2)]
    c1_comments=[c1_comments,'Dimensions are now [x,y,v]: '+strtrim(string(nx),2)+','+strtrim(string(ny),2)+','+strtrim(string(nchans),2)]
    ccmp_str.c1_comments=strjoin(c1_comments,';')
@@ -371,7 +369,7 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
 ;==============
 ; apply a blanking mask corresponding to the common field of view
 ;==============
-   
+
    sfng_make_commonfov,idl_in1=c1,idl_in2=c2,hdr_in1=c1hdr,hdr_in2=c2hdr $
                        ,fits_outmask=use_tagname+'_commonfov_mask.fits',/apply $
                        ,fits_out1=use_c1file+'.commFoV.fits' $
@@ -1185,8 +1183,7 @@ end
   if ymin lt 0 then yr=[1.1*ymin,1.1*ymax]
   if ymin ge 0 then yr=[0.8*ymin,1.1*ymax]
   tit='Relative Difference Cube, Common FoV'
-
-  yr=[-0.5,0.5]
+  ;yr=[-0.5,0.5]
   
   cgplot,chans,diff_chanflux/float(c1_chanflux),xtit='Channel number',ytit='[Cube1 - Cube2]/Cube 1',charsize=1.5,color=fgcolor,charthick=1.8,/nodata,xstyle=8,/ysty,yr=yr,xr=xr,xthick=2,ythick=2,thick=2
   cgplot,chans,chans*0,lines=1,/overplot
@@ -1351,8 +1348,20 @@ end
   
   loadct,20,rgb_table=palette
   TVLCT, cgColor('gray', /Triple), 0
-  immin=percentile(c1,95)<percentile(c2,95) & immax=percentile(c1,1)>percentile(c2,1)
 
+  c1def=c1
+  c2def=c2
+  c1indefidx=where(finite(c1) eq 0,comp=c1defidx,ict,ncomp=dct)
+  if ict gt 0 then c1def=c1[c1defidx]
+  c2indefidx=where(finite(c2) eq 0,comp=c2defidx,ict,ncomp=dct)
+  if ict gt 0 then c2def=c2[c2defidx]
+;  immax=percentile(c1def,1)>percentile(c2def,1) & immin=percentile(c1def,95)<percentile(c2def,95)
+  immax=percentile(c1def,0.5)>percentile(c2def,0.5) & immin=percentile(c1def,85)<percentile(c2def,85)
+
+  print,'Image minimum is:',immin
+  print,'Image maximum is:',immax
+
+  cube1_chans:
 ; cube 1
   use_win=use_win+1
   for k=start_chan,end_chan do begin
@@ -1365,6 +1374,9 @@ end
 
   endfor
 
+;  stop
+;  if good_color_range eq 0 then goto, cube1_chans
+  
 ; cube 2
   use_win=use_win+1
   for k=start_chan,end_chan do begin
@@ -1376,9 +1388,13 @@ end
      write_png,use_plotdir+use_pngfile,TVRD(/TRUE)
  endfor
 
+  ;stop
+  ;if good_color_range eq 0 then goto, cube1_chans
+
+diff_chans:
 ; diffcube
   use_win=use_win+1
-  immin=percentile(diffcube,98) & immax=percentile(diffcube,2)
+  immin=percentile(diffcube,85) & immax=percentile(diffcube,5)
   for k=start_chan,end_chan do begin
      window,use_win,xsize=400,ysize=400 
      cgImage, diffcube[*,*,k],  /Axes, Palette=palette, charsize=0.8, minval=immin, maxval=immax $
@@ -1387,6 +1403,9 @@ end
      use_pngfile='diffcube_chan'+STRING(k+1, FORMAT='(I3.3)')+'.png'
      write_png,use_plotdir+use_pngfile,TVRD(/TRUE)
   endfor
+
+  ;stop
+  ;if good_color_range eq 0 then goto, diff_chans
 
 ; joint emission mask
 
@@ -1495,7 +1514,7 @@ end
 
   use_pngfile='lindens_c1c2.png'
 
-  binsize2d=binsize/10.
+  binsize2d=binsize/use_binsize_2dfactor ; sometimes this needs to be tweaked depending on input map Npix& range
   density = Hist_2D(c1[jsigidx],c2[jsigidx], Min1=xr[0], Max1=xr[1], Bin1=binsize2d, $
                            Min2=yr[0], Max2=yr[1], Bin2=binsize2d)   
                            
@@ -1573,7 +1592,7 @@ end
 
   use_pngfile=+'lindens_c2c1.png'
     
-  binsize2d=binsize/10.
+  binsize2d=binsize/use_binsize_2dfactor
   density = Hist_2D(c2[jsigidx],c1[jsigidx], Min1=xr[0], Max1=xr[1], Bin1=binsize2d, $
                            Min2=yr[0], Max2=yr[1], Bin2=binsize2d)   
                            
@@ -1598,13 +1617,10 @@ end
 
     write_png,use_plotdir+use_pngfile,TVRD(/TRUE)
 
-
-  
-    
 ;======================
 ; Log Cube 1 vs Cube 2
 ;======================
-  
+    
   use_pngfile='logcorr_c1c2.png'
 
   plotmax=1.25*(max(c1[jsigidx],/nan)>max(c2[jsigidx],/nan))
@@ -1621,7 +1637,9 @@ end
 
   plotsym,0,1.2,/fill
   
-  xmin = plotmin & xmax = plotmax & binsize = round(plotmax*10.)/100.
+  xmin = plotmin & xmax = plotmax
+  binsize = round(plotmax*10.)/100.
+  
   bin_prof, [c1[jsigidx]] $
             ,[c2[jsigidx]] $
             , xmin=xmin, xmax=xmax, binsize=binsize $
@@ -1646,13 +1664,14 @@ end
   write_png,use_plotdir+use_pngfile,TVRD(/TRUE)
 
 
+  logdens_plot:
 ;================
 ; generate density plot - logarithmic axes, c1 (x) vs c2 (y)
 ;================
 
   use_pngfile='logdens_c1c2.png'
   
-  binsize2d=binsize
+  binsize2d=binsize/use_binsize_2dfactor ; sometimes this needs to be tweaked depending on input map Npix& range
   density = Hist_2D(alog10(c1[jsigidx]),alog10(c2[jsigidx]) $
                     , Min1=alog10(xr[0]), Max1=alog10(xr[1]), Bin1=binsize2d $
                            , Min2=alog10(yr[0]), Max2=alog10(yr[1]), Bin2=binsize2d)   
@@ -1678,6 +1697,8 @@ end
 
   write_png,use_plotdir+use_pngfile,TVRD(/TRUE)
 
+;  stop
+;  if good_bin_range eq 0 then goto,   logdens_plot
 
 ;======================
 ; Log Cube 2 vs Cube 1
@@ -1699,7 +1720,8 @@ end
 
   plotsym,0,1.2,/fill
   
-  xmin = plotmin & xmax = plotmax & binsize = round(plotmax*10.)/100.
+  xmin = plotmin & xmax = plotmax
+  binsize = round(plotmax*10.)/100.
   bin_prof, [c2[jsigidx]] $
             ,[c1[jsigidx]] $
             , xmin=xmin, xmax=xmax, binsize=binsize $
@@ -1730,7 +1752,7 @@ end
 
   use_pngfile='logdens_c2c1.png'
   
-  binsize2d=binsize
+  binsize2d=binsize/use_binsize_2dfactor
   density = Hist_2D(alog10(c2[jsigidx]),alog10(c1[jsigidx]) $
                     , Min1=alog10(xr[0]), Max1=alog10(xr[1]), Bin1=binsize2d $
                            , Min2=alog10(yr[0]), Max2=alog10(yr[1]), Bin2=binsize2d)   
@@ -1756,6 +1778,9 @@ end
 
   write_png,use_plotdir+use_pngfile,TVRD(/TRUE)
 
+;  stop
+;  if good_bin_range eq 0 then goto,   logdens_plot
+
 
   
 save_structure:
@@ -1772,7 +1797,7 @@ save_structure:
 
    if do_report eq 1 then begin
       sfng_make_latex_elements,ccmp_str,reportdir=use_reportdir,plotdir=use_plotdir
-      sfng_compile_latex,ccmp_str,reportdir=use_reportdir,plotdir=use_plotdir
+      sfng_compile_latex,reportdir=use_reportdir,plotdir=use_plotdir
    end
 
    if keyword_set(verbose) then message,'Finished sfng_cube_compare.pro for '+use_c1file+' and '+use_c2file,/info
