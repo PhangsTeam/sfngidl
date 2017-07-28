@@ -45,11 +45,11 @@ order=sort(sarray)
 sarray=sarray(order)  ;sorted array
 
 IF keyword_set(low) THEN BEGIN
-  x=long(N*perc/100.)>0<(N-1)
+  x=long(N*(perc/100.))>0<(N-1)
   values=sarray(0:x)
   indexes=order(0:x)
 ENDIF ELSE BEGIN
-  x=N-long(N*perc/100.)>0<(N-1)
+  x=N-long(N*(perc/100.))>0<(N-1)
   values=sarray(x:N-1)
   indexes=order(x:N-1)
 ENDELSE
