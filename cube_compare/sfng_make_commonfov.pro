@@ -144,7 +144,7 @@ pro sfng_make_commonfov,datadir=datadir,fits_in1=fits_in1,fits_in2=fits_in2,fits
 ; -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 ; MAKE 2D COMMON FOV MASK
 ; -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-  
+
   badidx = where(mask eq 0 or finite(d1_plane) eq 0 or finite(d2_plane) eq 0, ct,ncomp=gct,comp=goodidx)
   
   if ct gt 0 then begin
