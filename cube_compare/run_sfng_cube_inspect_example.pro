@@ -2,6 +2,8 @@ pro run_sfng_cube_inspect_example
 
 ;; following is to inspect output of pipeline reduction
 
+  do_stop = 1
+  
 pipe_v1p0_dr:
 
   cubename='_co21_12m+7m'
@@ -106,7 +108,7 @@ pipe_v1p0_dr:
                        , jy2k=1,rebaseline=-1,expand_mask_edges=[5,2] $
                        ,/verb, galaxy=gallist[i],target_beam=use_targetbeam,/nostop  
 
-     stop
+     if keyword_set(do_stop) then stop
      
 
   endfor 
