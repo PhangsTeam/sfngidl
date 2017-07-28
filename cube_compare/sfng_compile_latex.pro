@@ -1,25 +1,27 @@
-PRO sfng_compile_latex,cube_cmp_str,reportdir=reportdir,plotdir=plotdir $
+PRO sfng_compile_latex,reportdir=reportdir,plotdir=plotdir $
                       ,template=template,tagname=tagname $
-                      ,help=help,verbose=verbose
+                      ,help=help,verbose=verbose,inspect=inspect
 
 ;+
 ; NAME
 ;  sfng_compile_latex
 ; PURPOSE
-;  creates a .tex file describing SFNG cube comparison tests and compiles it 
+;  creates a .tex file describing SFNG cube comparison/inspection tests and compiles it 
 ; CALLING SEQUENCE
-;  sfng_compile_latex, cube_cmp_str, [plotdir=plotdir,reportdir=reportdir,/help,/verbose]
+;  sfng_compile_latex, [template=template,plotdir=plotdir,reportdir=reportdir,/help,/verbose,/inspect]
 ; INPUTS
-;  cube_cmp_str: structure containing results of cube comparison tests
 ; OPTIONAL INPUT:
 ;     plotdir = output directory for plots generated during
 ;               comparison. Defaults to current directory
 ;     reportdir = output directory for final PDF report. Defaults to
 ;                current directory
+;     template = alternative .tex template file    
 ;     tagname = optional additional part of filename    
 ; ACCEPTED KEY-WORDS:
 ;     help = print this help
 ;     verbose = print extra information to screen
+;     inspect = compile for output PDF document for sfng_cube_inspect,
+;               (default is to compile for sfng_cube_compare)
 ; OUTPUTS
 ;     PDF document
 ; COMMENTS
@@ -49,6 +51,7 @@ PRO sfng_compile_latex,cube_cmp_str,reportdir=reportdir,plotdir=plotdir $
 ;===================
 ; process user inputs
 ;===================
+  if keyword_set(inspect) then use_template='./sfng_cube_inspect_pdftemplate.tex'
   if keyword_set(template) then use_template=template
   if keyword_set(plotdir) then use_plotdir=plotdir
   if keyword_set(reportdir) then use_reportdir=reportdir
@@ -74,6 +77,7 @@ PRO sfng_compile_latex,cube_cmp_str,reportdir=reportdir,plotdir=plotdir $
 ;===================
   file_in=use_template
   file_out=use_reportdir+'sfng_cube_compare_'+use_tagname+use_datestr+'.tex'
+  if keyword_set(inspect) then file_out=use_reportdir+'sfng_cube_inspect_'+use_tagname+use_datestr+'.tex'
   str='cp '+file_in+' '+file_out
   spawn,str
 
