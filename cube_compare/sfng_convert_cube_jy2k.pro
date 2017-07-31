@@ -18,7 +18,7 @@ FUNCTION sfng_convert_cube_jy2k,in=in,hdr_in=hdr_in,hdr_out=hdr_out $
 ;     factor = return the numerical factor that was used for the conversion
 ;     frequency = line frequency in GHz (required if wavelength not given and
 ;                 RESTFREQ not specified in header). Takes precedence
-;                 over wavelength if both are specified. Default is
+;                 over wavelength if both are specified. Dfault is
 ;                 230.598GHz, i.e. 12CO(2-1)
 ;     wavelength = line wavelength in millimetres (required if frequency not given and
 ;                 RESTFREQ not specified in header)
@@ -88,11 +88,15 @@ FUNCTION sfng_convert_cube_jy2k,in=in,hdr_in=hdr_in,hdr_out=hdr_out $
      sxaddpar,hdr_out,'HISTORY','Converted from Jy/beam to K (Tmb) using factor: '+factor_str
      sxaddpar,hdr_out,'RESTFREQ',use_frequency
      sxaddpar,hdr_out,'BUNIT','K'
+     sxaddpar,hdr_out,'DATAMIN',min(out,/nan)
+     sxaddpar,hdr_out,'DATAMAX',max(out,/nan)
   endif else begin
      out=in/factor
      sxaddpar,hdr_out,'HISTORY','Converted from K (Tmb) to Jy/beam using factor: '+factor_str
      sxaddpar,hdr_out,'BUNIT','JY/BEAM'
      sxaddpar,hdr_out,'RESTFREQ',use_frequency
+     sxaddpar,hdr_out,'DATAMIN',min(out,/nan)
+     sxaddpar,hdr_out,'DATAMAX',max(out,/nan)
   end
   
 the_end:
