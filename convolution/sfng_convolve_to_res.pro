@@ -270,7 +270,7 @@ pro sfng_convolve_to_res, idl_in=idl_in, hdr_in=hdr_in, hdr_out=hdr_out, idl_out
            , hdr = hdr $
            , out_data = data_out $
            , out_hdr = out_hdr $
-           , target_beam=target_beams[j]*[1.*1.] $
+           , target_beam=target_beams[j]*[1.,1.] $
            , perbeam=use_perbeam
         
         sxaddpar,hdr_out,'DATAMAX',max(data_out,/nan)
