@@ -3,9 +3,9 @@ function sfng_check_header, hdr = hdr $
                             , fixhdr = fixhdr $
                             , pixscale = pixscale $
                             , beam = beam $
-                            , bunit = bunit $
                             , chanw = chanw $
                             , unit = unit $
+                            , casa_version = casa_version $
                             , help = help
 
 ;+  NAME:
@@ -17,13 +17,15 @@ function sfng_check_header, hdr = hdr $
 ;     to do comparison
 ; INPUTS:
 ;     hdr = a FITS header
-; OPTIONAL INPUT:
+; OPTIONAL OUTPUTS:
 ;     fixhdr = modified output header. If present, sfng_check_header will try
 ;              to correct common problems
 ;     pixscale = pixscale in arcsecs, calculated from cdelt1 (or CD
 ;                matrix if cdelt1 not present)
 ;     beam     = [bmaj,bmin,bpa]
 ;     chanw    = channel width  
+;     unit    = intensity units
+;     casa_version    = content of FITS ORIGIN keyword field
 ;     comments = summary of header information, attempted fixes etc.
 ; ACCEPTED KEY-WORDS:
 ;     help = print this help
@@ -32,7 +34,7 @@ function sfng_check_header, hdr = hdr $
 ;                              c1_comments, beam=beam, $
 ;                              pixscale=pixscale, chanw=chanw)
 ; OUTPUTS:
-;     None
+;     pass == status flag, 1: header passed, 0: header failed
 ; PROCEDURE AND SUBROUTINE USED
 ;     Goddard Astron routines
 ; COMMONS:
@@ -78,7 +80,21 @@ function sfng_check_header, hdr = hdr $
      fixhdr=hdr
   endif
 
+; &%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%
+; CASA_VERSION
+; &%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%
 
+  casa_version_str='unknown'
+  casa_version = sxpar(hdr, "ORIGIN", count=casa_ct)
+
+  if casa_ct eq 0 then begin
+     comments = [comments, "No ORIGIN keyword, CASA version unknown"]
+  end else begin
+     casa_version_str=strupcase(strcompress(casa_version,/rem))
+     comments = [comments, "CASA version for imaging is "+casa_version_str]
+  end
+  casa_version=casa_version_str
+  
 ; &%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%
 ; UNITS
 ; &%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%

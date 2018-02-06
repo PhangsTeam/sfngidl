@@ -108,7 +108,7 @@ compare_tables_only:
 ;== Make the input cube table
 ;================
 
-  one_st={file:'',pixscale:nan,chanw:nan,bmaj:nan,bmin:nan,bpa:nan,bunit:'',nx:0,ny:0,nv:0}
+  one_st={file:'',pixscale:nan,chanw:nan,bmaj:nan,bmin:nan,bpa:nan,bunit:'',casa:'',nx:0,ny:0,nv:0}
   st=replicate(one_st,2)
 
   st[0].file=cube_str.c1_file
@@ -131,13 +131,15 @@ compare_tables_only:
   st[1].nv=cube_str.c2_dims[2]
   st[0].bunit=cube_str.c1_bunit
   st[1].bunit=cube_str.c2_bunit
-
+  st[0].casa=cube_str.c1_casa
+  st[1].casa=cube_str.c2_casa
+  
   fileout=use_reportdir+'inputcube_table.tex'
   caption='Basic parameters of input cubes.'
   label='tab:input_cubes'
 
-  frmt='(A40, " & ",F0.2, " & ",F0.2, " & ",F0.2, " & ",F0.2, " & ",F0.2, " & ", A10, " & ", I0, " & ",I0, " & ",I0," \\")'
-  units=['','[as]','[km/s]', '[as]','[as]','[deg]' , '', '' , '', ''] ; order is order of tags in the structure, not replace arrays
+  frmt='(A40, " & ",F0.2, " & ",F0.2, " & ",F0.2, " & ",F0.2, " & ",F0.2, " & ", A10, " & ", A20, " & ",I0, " & ",I0," & ", I0," \\")'
+  units=['','[as]','[km/s]', '[as]','[as]','[deg]' , '', '' , '', '', ''] ; order is order of tags in the structure, not replace arrays
   tiny=1 & small=0 & landscape=0 & long=1
 
   struct2latex_table,st,fileout,use_all_format=frmt, long=long, /force, $
@@ -229,7 +231,7 @@ compare_tables_only:
 
   frmt='(A40, " & ",E0.3, " & ",F0.2, " & ",E0.3, " & ",F0.2, " \\")'
   units=['', '[K.km/s.pix]' , '[K]', '[K.km/s.pix]' ,'[K]'] ; order is order of tags in the structure, not replace arrays
-  tiny=0 & small=1 & landscape=0 & long=1
+  tiny=1 & small=0 & landscape=0 & long=1
 
   struct2latex_table,st,fileout,use_all_format=frmt, long=long, /force, $
                      /silent,caption=caption,label=label,units=units,tiny=tiny,small=small,landscape=landscape
@@ -458,6 +460,39 @@ compare_figures_only:
   for k=0,nfigs-1 do begin
      if counter eq 2 then caption=caption+' (cont.)'
      label='fig:diffcube_chanmaps_'+strtrim(string(fix(counter)),2)
+     start_idx=start_idx_i+k*16
+     end_idx=end_idx_i+k*16
+     if end_idx ge nfiles then end_idx=nfiles-1
+     use_files=allfiles[start_idx:end_idx]
+     fig_st=make_latex_fig_structure(position=position,double_column=double_column,centering=centering, $
+                                    dimension_type=dimension_type,dimension_value=dimension_value,dimension_unit=dimension_unit, $
+                                    label=label,caption=caption,newpage=newpage,ps_file_names=use_files,_extra=_extra)
+     lst=latex_figst2figstr(fig_st)
+  
+     FOR i=0L,n_elements(lst)-1 DO printf,unit,lst(i)
+     printf,unit,' '
+     counter=counter+1
+  end
+  
+  close,unit
+  free_lun,unit
+  message,'Wrote '+tex_file_name,/info
+
+  ; powerspectra
+  
+  caption='Powerspectra: Individual Channels of Matched Cubes'
+  counter=1
+  allfiles=file_basename(file_search(use_plotdir+"/powerspec_*png"))
+  nfiles=n_elements(allfiles)
+  nfigs=ceil(nfiles/16.) ; we want 4x4 panels in each figure
+  start_idx_i=0 & end_idx_i=15
+
+  tex_file_name=use_reportdir+'powerspec_figs.tex'
+  openw,unit,tex_file_name,/get_lun
+
+  for k=0,nfigs-1 do begin
+     if counter eq 2 then caption=caption+' (cont.)'
+     label='fig:powerspec_'+strtrim(string(fix(counter)),2)
      start_idx=start_idx_i+k*16
      end_idx=end_idx_i+k*16
      if end_idx ge nfiles then end_idx=nfiles-1

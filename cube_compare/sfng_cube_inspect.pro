@@ -884,7 +884,7 @@ save_structure:
 
    produce_report:
 ;================
-;
+;make a PDF report
 ;================
 
    if do_report eq 1 then begin

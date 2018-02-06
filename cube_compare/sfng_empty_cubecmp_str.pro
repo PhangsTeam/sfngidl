@@ -22,6 +22,8 @@ function sfng_empty_cubecmp_str
               c2_pixscale: nan , $
               c1_chanw: nan , $
               c2_chanw: nan , $
+              c1_casa: '' , $
+              c2_casa: '' , $
               c1_bunit: '' , $
               c2_bunit: '' , $
               c1_beam: fltarr(3) , $

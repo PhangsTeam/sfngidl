@@ -72,6 +72,8 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
 ;     nice  =  pause before deleting existing .png and .tex files in
 ;              the plots and report directories. Pause to review
 ;              header information
+;     nomatch = do not try to match the cubes (grid+resolution) before comparison
+;               
 ; EXAMPLES
 ;       sfng_cube_compare,datadir=use_datadir,outdir=use_outdir,plotdir=use_plotdir $
 ;                    ,reportdir=use_reportdir,savedir=use_savedir $
@@ -163,6 +165,7 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
   if keyword_set(tagname) then use_tagname=tagname
   if keyword_set(line_frequency) then use_line_frequency=line_frequency
   if keyword_set(target_beam) then use_target_beam=target_beam
+  if keyword_set(expand_mask_edges) then use_expand_mask_edges=expand_mask_edges
   if keyword_set(xygrid) then use_xygrid=xygrid
   if keyword_set(vgrid) then use_vgrid=vgrid
   if keyword_set(galaxy) then use_galaxy=galaxy
@@ -246,13 +249,13 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
 
   c1hdr_fix=c1hdr
   pass1=sfng_check_header(hdr=c1hdr, fixhdr=c1hdr_fix, comments = c1_comments $
-                            , beam=c1_beam, pixscale=c1_pixscale, chanw=c1_chanw, unit=c1_bunit)
+                            , beam=c1_beam, pixscale=c1_pixscale, chanw=c1_chanw, unit=c1_bunit, casa_version=c1_casa)
      
   if keyword_set(verbose) then message,'Checking header for data: '+use_c2file,/info
 
   c2hdr_fix=c2hdr
   pass2=sfng_check_header(hdr=c2hdr, fixhdr=c2hdr_fix, comments = c2_comments $
-                            , beam=c2_beam, pixscale=c2_pixscale, chanw=c2_chanw, unit=c2_bunit)
+                            , beam=c2_beam, pixscale=c2_pixscale, chanw=c2_chanw, unit=c2_bunit, casa_version=c2_casa)
    
      
   if pass1 ne 1 or pass2 ne 1 or keyword_set(verbose) then begin
@@ -263,9 +266,12 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
      print,'&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%&%'
 ;     stop
   end
-        
+
+  
   ccmp_str.c1_comments=strjoin(c1_comments,';')
   ccmp_str.c2_comments=strjoin(c2_comments,';')
+  ccmp_str.c1_casa=c1_casa
+  ccmp_str.c2_casa=c2_casa
   ccmp_str.c1_pixscale=c1_pixscale*3600.
   ccmp_str.c2_pixscale=c2_pixscale*3600.
   ccmp_str.c1_beam=c1_beam
@@ -328,14 +334,18 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
 ; match the cubes -- resolution and gridding parameters
 ;==============
 
-   sfng_match_cubes,idl_in1=c1,idl_in2=c2,hdr_in1=c1hdr,hdr_in2=c2hdr $
+  if not keyword_set(nomatch) then begin
+
+     sfng_match_cubes,idl_in1=c1,idl_in2=c2,hdr_in1=c1hdr,hdr_in2=c2hdr $
                     ,idl_out1=c1match,idl_out2=c2match,hdr_out1=c1hdr_out,hdr_out2=c2hdr_out $
                    ,xygrid_master=use_xygrid,vgrid_master=use_vgrid,target_beam=use_target_beam,/round $
                    ,outdir=use_outdir,fits_out1=use_c1file+'.match.fits',fits_out2=use_c2file+'.match.fits'
 
-   c1=c1match & c1hdr=c1hdr_out
-   c2=c2match & c2hdr=c2hdr_out
+     c1=c1match & c1hdr=c1hdr_out
+     c2=c2match & c2hdr=c2hdr_out
 
+  end
+  
    match_cdelt1=sxpar(c1hdr,'CDELT1',count=cdelt1_ct)
    match_cdelt3=sxpar(c1hdr,'CDELT3',count=cdelt3_ct)
    match_bmaj=sxpar(c1hdr,'BMAJ',count=bmaj_ct)
@@ -350,21 +360,28 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
    ccmp_str.angres_as=match_bmaj*3600.
    ccmp_str.dims=match_pixdim
 
-   c1_comments=[c1_comments,'Regridded and brought to matching resolution']
-   c1_comments=[c1_comments,'Pixscale is now [as]: '+strtrim(string(abs(match_cdelt1)*3600.),2)]
-   c1_comments=[c1_comments,'Channel width is now [km/s]: '+strtrim(string(match_cdelt3),2)]
-   c1_comments=[c1_comments,'Resolution is now [as]: '+strtrim(string(abs(match_bmaj)*3600.),2)]
-   c1_comments=[c1_comments,'Dimensions are now [x,y,v]: '+strtrim(string(nx),2)+','+strtrim(string(ny),2)+','+strtrim(string(nchans),2)]
-   ccmp_str.c1_comments=strjoin(c1_comments,';')
-
-
-   c2_comments=[c2_comments,'Regridded and brought to matching resolution']
-   c2_comments=[c2_comments,'Pixscale is now [as]: '+strtrim(string(abs(match_cdelt1)*3600.),2)]
-   c2_comments=[c2_comments,'Channel width is now [km/s]: '+strtrim(string(match_cdelt3),2)]
-   c2_comments=[c2_comments,'Resolution is now [as]: '+strtrim(string(abs(match_bmaj)*3600.),2)]
-   c2_comments=[c2_comments,'Dimensions are now [x,y,v]: '+strtrim(string(nx),2)+','+strtrim(string(ny),2)+','+strtrim(string(nchans),2)]
-   ccmp_str.c2_comments=strjoin(c2_comments,';')
-
+   if not keyword_set(nomatch) then begin
+      c1_comments=[c1_comments,'Regridded and brought to matching resolution']
+      c1_comments=[c1_comments,'Pixscale is now [as]: '+strtrim(string(abs(match_cdelt1)*3600.),2)]
+      c1_comments=[c1_comments,'Channel width is now [km/s]: '+strtrim(string(match_cdelt3),2)]
+      c1_comments=[c1_comments,'Resolution is now [as]: '+strtrim(string(abs(match_bmaj)*3600.),2)]
+      c1_comments=[c1_comments,'Dimensions are now [x,y,v]: '+strtrim(string(nx),2)+','+strtrim(string(ny),2)+','+strtrim(string(nchans),2)]
+      ccmp_str.c1_comments=strjoin(c1_comments,';')
+      
+      
+      c2_comments=[c2_comments,'Regridded and brought to matching resolution']
+      c2_comments=[c2_comments,'Pixscale is now [as]: '+strtrim(string(abs(match_cdelt1)*3600.),2)]
+      c2_comments=[c2_comments,'Channel width is now [km/s]: '+strtrim(string(match_cdelt3),2)]
+      c2_comments=[c2_comments,'Resolution is now [as]: '+strtrim(string(abs(match_bmaj)*3600.),2)]
+      c2_comments=[c2_comments,'Dimensions are now [x,y,v]: '+strtrim(string(nx),2)+','+strtrim(string(ny),2)+','+strtrim(string(nchans),2)]
+      ccmp_str.c2_comments=strjoin(c2_comments,';')
+   end else begin
+      c1_comments=[c1_comments,'No regridding or resolution matching requested']
+      ccmp_str.c1_comments=strjoin(c1_comments,';')
+      c2_comments=[c2_comments,'No regridding or resolution matching requested']
+      ccmp_str.c2_comments=strjoin(c2_comments,';')
+   end
+   
 
 ;==============
 ; apply a blanking mask corresponding to the common field of view
@@ -392,6 +409,8 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
 ; simple rebaseline
 ;====================
 
+;   stop
+   
    if use_rebaseline[0] ne -1 then begin
       
 ; mask regions of strong signal before estimating new baselines
@@ -422,6 +441,7 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
                       ,outdir=use_outdir 
 
       c1=c1_rebase & c1hdr=c1_rebase_hdr 
+      writefits,use_outdir+use_c1file+'.commFoV.rebase.fits',c1,c1hdr
       
       ccmp_str.c1_rebase_flag=1
       ccmp_str.c1_rebase_order=use_rebaseline[0]
@@ -461,7 +481,8 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
                       ,outdir=use_outdir 
 
       c2=c2_rebase & c2hdr=c2_rebase_hdr 
-      
+      writefits,use_outdir+use_c2file+'.commFoV.rebase.fits',c2,c2hdr
+
       ccmp_str.c2_rebase_flag=1
       ccmp_str.c2_rebase_order=use_rebaseline[1]
       
@@ -750,8 +771,8 @@ end
 
   al_legend, /top,/left, box=0,clear=0 $
                 ,[use_c1str, $
-                  'Mean: '+sigfig(c1_noisestats.mean,3,/sci), $
-                  'RMS: '+ sigfig(c1_noisestats.rms,3,/sci)] $
+                  'Mean: '+sigfig(c1_noisestats_nosignal.mean,3,/sci), $
+                  'RMS: '+ sigfig(c1_noisestats_nosignal.rms,3,/sci)] $
                 , lines=-99, charsize=1.8,charthick=1.7
 
   al_legend, /top,/right, box=0,clear=0 $
@@ -792,8 +813,8 @@ end
 
   al_legend, /top,/left, box=0,clear=0 $
                 ,[use_c2str, $
-                  'Mean: '+sigfig(c2_noisestats.mean,3,/sci), $
-                  'RMS: '+ sigfig(c2_noisestats.rms,3,/sci)] $
+                  'Mean: '+sigfig(c2_noisestats_nosignal.mean,3,/sci), $
+                  'RMS: '+ sigfig(c2_noisestats_nosignal.rms,3,/sci)] $
                 , lines=-99, charsize=1.8,charthick=1.7
 
   al_legend, /top,/right, box=0,clear=0 $
@@ -833,8 +854,8 @@ end
 
   al_legend, /top,/left, box=0,clear=0 $
                 ,['Difference Cube', $
-                  'Mean: '+sigfig(c1_noisestats.mean,3,/sci), $
-                  'RMS: '+ sigfig(c1_noisestats.rms,3,/sci)] $
+                  'Mean: '+sigfig(diffcube_stats_nosignal.mean,3,/sci), $
+                  'RMS: '+ sigfig(diffcube_stats_nosignal.rms,3,/sci)] $
                 , lines=-99, charsize=1.8,charthick=1.7
 
   al_legend, /top,/right, box=0,clear=0 $
@@ -1421,7 +1442,89 @@ diff_chans:
      use_pngfile='jointsignalmask_chan'+STRING(k+1, FORMAT='(I3.3)')+'.png'
      write_png,use_plotdir+use_pngfile,TVRD(/TRUE)
   endfor
+
+;======================
+; POWER SPECTRA
+;======================
+
+;  stop
   
+  use_win=0L
+  !p.position=[0.2,0.2,0.8,0.8]
+  
+  for k=start_chan,end_chan do begin
+     i1=reform(c1[*,*,k]) & i2=reform(c2[*,*,k])
+     sz=size(i1)  & ndim=sz[0] & nax1=sz[1] & nax2=sz[2]
+     nelts = nax1 > nax2
+     pow = alog(double(nelts))/alog(2d0)
+     targpow = ceil(pow)
+     if targpow ne pow then begin
+        i1pad = dblarr(2L^targpow, 2L^targpow)
+        xcen=fix((2L^targpow-nax1)/2) & ycen=fix((2L^targpow-nax2)/2)
+        i1pad[xcen,ycen] = i1
+        i2pad = dblarr(2L^targpow, 2L^targpow)
+        i2pad[xcen,ycen] = i2
+        i1=i1pad & i2=i2pad
+     end 
+     badpix=where(finite(i1) eq 0 or finite(i2) eq 0,badct)
+     if badct gt 0 then begin
+        i1[badpix]=0.
+        i2[badpix]=0.
+     end
+     fft1 = FFT(i1, /CENTER)
+     ps1 = ABS(fft1)^2
+     sps1 = ALOG10(ps1)
+;     sps1_0 = sps1 - MAX(sps1)
+     mm1=mean_by_radaz(sps1,/nan,/cropcircle)
+     sps1_1d=(mm1.radial_mean);+abs(min(mm1.radial_mean))+2)
+;     sps1_1d0=sps1_1d/sps1_1d[0]
+     fft2 = FFT(i2, /CENTER)
+     ps2 = ABS(fft2)^2
+     sps2 = ALOG10(ps2)
+;     sps2_0 = sps2 - MAX(sps2)
+     mm2=mean_by_radaz(sps2,/nan,/cropcircle)
+     sps2_1d=(mm2.radial_mean);+abs(min(mm2.radial_mean))+2)
+;     sps2_1d0=sps2_1d/sps2_1d[0]
+
+
+     dfpix=1./2^targpow              ; cycles per pixel
+     dfas=(1./pixscale_as)/2^targpow ; cycles per as
+     raxis=1./(dfas*(mm1.radial_axis));+0.5)) ; offset by half a pixel
+
+     normscale=pixscale_as*nax1/2.
+     normscale=60.
+     dummy=min(abs(raxis-normscale),normidx)
+;     sps1_1d0=(10+sps1_1d)/(10+sps1_1d[normidx])
+;     sps2_1d0=(10+sps2_1d)/(10+sps2_1d[normidx])
+     sps1_1d0=sps1_1d
+     sps2_1d0=sps2_1d
+
+     xr=alog10([raxis[1],1.])
+     yr=[(min(sps1_1d0) < min(sps2_1d0)),(max(sps1_1d0) > max(sps2_1d0))+0.5]
+
+     window,use_win,xsize=400,ysize=400 
+     plot, alog10(raxis),sps1_1d0,xr=xr,yr=yr,/xsty,/ysty $
+              ,xtit='Log(Angular Scale/[as])' $
+              ,ytit='Power [arbitrary units]' $
+           ,Position=[0.05,0.05,0.9,0.9] , /nodata
+     oplot, alog10(raxis),sps1_1d0,thick=2, color=cgcolor('red')
+     oplot, alog10(raxis),sps2_1d0,thick=2,color=cgcolor('blue')
+
+      al_legend,/bottom,/left,clear=0, box=0 $
+               , [ use_c1str, $
+                   use_c2str] $
+               ,lines=[0,0] $
+               ,colors=[cgcolor('red'),cgcolor('blue')] $
+               ,charsize=1.,thick=2,charthick=1.8
+     al_legend,/top,/left,clear=0, box=0 $
+               , [ 'chan '+STRING(k+1, FORMAT='(I3.3)') ] $
+               ,charsize=1,charthick=1.8
+    
+     use_pngfile='powerspec_'+STRING(k+1, FORMAT='(I3.3)')+'.png'
+     write_png,use_plotdir+use_pngfile,TVRD(/TRUE)
+     
+  endfor
+
 ;======================
 ; CORRELATION METRICS
 ;======================
