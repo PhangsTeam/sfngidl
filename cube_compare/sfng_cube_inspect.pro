@@ -125,7 +125,7 @@ pro sfng_cube_inspect,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
   use_reportdir = './report/'
   use_tagname = 'mygalaxy'
   use_line_frequency = restfreq_12co21/1.e9
-  use_jy2k = 0 ; -- 1 means do Jy->K conversion
+  do_jy2k = 0 ; -- 1 means do Jy->K conversion
   use_rebaseline = -1 ; -1 (do nothing) 0 (offset), 1 (linear) or 2 (quadratic) -- one value for each cube
   use_expand_mask_edges = [0,0] ; [# edge_pixels, # edge_channels] to be blanked (in addition to common FoV)
   do_report=1
@@ -245,7 +245,7 @@ pro sfng_cube_inspect,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
 
   c1hdr_fix=c1hdr
   pass1=sfng_check_header(hdr=c1hdr, fixhdr=c1hdr_fix, comments = c1_comments $
-                            , beam=c1_beam, pixscale=c1_pixscale, chanw=c1_chanw, unit=c1_bunit)
+                            , beam=c1_beam, pixscale=c1_pixscale, chanw=c1_chanw, unit=c1_bunit,casa_version=c1_casa)
      
     
   if pass1 ne 1 or keyword_set(verbose) then begin
@@ -258,6 +258,7 @@ pro sfng_cube_inspect,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
   cinsp_str.c1_pixscale=c1_pixscale*3600.
   cinsp_str.c1_beam=c1_beam
   cinsp_str.c1_bunit=c1_bunit
+  cinsp_str.c1_casa=c1_casa
   cinsp_str.c1_chanw=c1_chanw
   cinsp_str.c1_dims=size(c1,/dim)
   
