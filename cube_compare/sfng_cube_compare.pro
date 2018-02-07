@@ -179,17 +179,30 @@ pro sfng_cube_compare,datadir=datadir,outdir=outdir,plotdir=plotdir,reportdir=re
 ;===================
 ; enforce final back slash and make sure directories exist
 ;===================
-  use_datadir=file_search(use_datadir,/mark,/full)
-  use_outdir=file_search(use_outdir,/mark,/full)
-  use_plotdir=file_search(use_plotdir,/mark,/full)
-  use_reportdir=file_search(use_reportdir,/mark,/full)
-  use_savedir=file_search(use_savedir,/mark,/full)
+  ;; use_datadir=file_search(use_datadir,/mark,/full)
+  ;; use_outdir=file_search(use_outdir,/mark,/full)
+  ;; use_plotdir=file_search(use_plotdir,/mark,/full)
+  ;; use_reportdir=file_search(use_reportdir,/mark,/full)
+  ;; use_savedir=file_search(use_savedir,/mark,/full)
 
-  if use_datadir eq '' or use_outdir eq '' or $
-     use_plotdir eq '' or use_savedir eq '' then $
+  ;; if use_datadir eq '' or use_outdir eq '' or $
+  ;;    use_plotdir eq '' or use_savedir eq '' then $
+  ;;    message,'Problem with data/out/plot/save directories. Do they exist?'
+
+  ;; if do_report eq 1 and use_reportdir eq '' then $
+  ;;    message,'Problem with report directory?'
+
+    spawn,'ls -dp1 '+use_datadir, use_datadir,exit_status=datadir_status
+  spawn,'ls -dp1 '+use_plotdir, use_plotdir,exit_status=plotdir_status
+  spawn,'ls -dp1 '+use_outdir, use_outdir,exit_status=outdir_status
+  spawn,'ls -dp1 '+use_savedir, use_savedir,exit_status=savedir_status
+  spawn,'ls -dp1 '+use_reportdir, use_reportdir,exit_status=reportdir_status
+
+  if datadir_status ne 0 or plotdir_status ne 0 or $
+     outdir_status ne 0 or savedir_status ne 0 then $
      message,'Problem with data/out/plot/save directories. Do they exist?'
 
-  if do_report eq 1 and use_reportdir eq '' then $
+  if do_report eq 1 and reportdir_status ne 0 then $
      message,'Problem with report directory?'
 
 ;==============
@@ -1899,7 +1912,7 @@ save_structure:
 ;================
 
    if do_report eq 1 then begin
-      sfng_make_latex_elements,ccmp_str,reportdir=use_reportdir,plotdir=use_plotdir
+      sfng_make_latex_elements,ccmp_str,reportdir=use_reportdir,plotdir=use_plotdir,type='COMPARE'
       sfng_compile_latex,reportdir=use_reportdir,plotdir=use_plotdir
    end
 

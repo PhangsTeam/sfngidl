@@ -3,7 +3,9 @@ PRO sfng_make_latex_elements,cube_str $
                              ,plotdir=plotdir $
                              ,figures_only=figures_only $
                              ,tables_only=tables_only $
-                             ,help=help,verbose=verbose, inspect=inspect
+                             ,help=help,verbose=verbose, inspect=inspect $
+                             ,simple=simple $
+                             ,type=type
 
 ; NAME:
 ;     sfng_make_latex_elements
@@ -53,6 +55,7 @@ PRO sfng_make_latex_elements,cube_str $
   nan=!values.f_nan
   use_reportdir='./report/'
   use_plotdir='./plots/'
+  use_type='SIMPLE'
   
 ;================
 ; Process user inputs
@@ -60,16 +63,11 @@ PRO sfng_make_latex_elements,cube_str $
 
   IF keyword_set(reportdir) then use_reportdir=reportdir
   IF keyword_set(plotdir) then use_plotdir=plotdir
+  IF keyword_set(type) then use_type=strupcase(type)
   
 
-  IF not keyword_set(inspect) then begin
-;================
-; COMPARISON LATEX
-;================
-
-     IF keyword_set(figures_only) THEN goto,compare_figures_only
-  IF keyword_set(tables_only) THEN goto,compare_tables_only
-  IF keyword_set(logs_only) THEN goto,compare_logs_only
+  CASE use_type of
+     'COMPARE': begin
 
 ;================
 ; Strip special characters from filenames to stop latex throwing an error
@@ -77,6 +75,14 @@ PRO sfng_make_latex_elements,cube_str $
 
   use_c1str=repstr(cube_str.c1_file,'_','\_')
   use_c2str=repstr(cube_str.c2_file,'_','\_')
+
+;================
+; COMPARISON LATEX
+;================
+
+  IF keyword_set(figures_only) THEN goto,compare_figures_only
+  IF keyword_set(tables_only) THEN goto,compare_tables_only
+  IF keyword_set(logs_only) THEN goto,compare_logs_only
   
   compare_logs_only:
 ;================
@@ -343,39 +349,6 @@ compare_figures_only:
   angle=0.
   centering=0
 
-; emission_mask chan maps
-  
-  caption='Joint Emission Mask: Individual Channels'
-  counter=1
-  allfiles=file_basename(file_search(use_plotdir+"/joint*png"))
-  nfiles=n_elements(allfiles)
-  nfigs=ceil(nfiles/16.) ; we want 4x4 panels in each figure
-  start_idx_i=0 & end_idx_i=15
-
-  tex_file_name=use_reportdir+'emissionmask_chanmaps_fig.tex'
-  openw,unit,tex_file_name,/get_lun
-
-  for k=0,nfigs-1 do begin
-     if counter eq 2 then caption=caption+' (cont.)'
-     label='fig:jsm_chanmaps_'+strtrim(string(fix(counter)),2)
-     start_idx=start_idx_i+k*16
-     end_idx=end_idx_i+k*16
-     if end_idx ge nfiles then end_idx=nfiles-1
-     use_files=allfiles[start_idx:end_idx]
-     fig_st=make_latex_fig_structure(position=position,double_column=double_column,centering=centering, $
-                                    dimension_type=dimension_type,dimension_value=dimension_value,dimension_unit=dimension_unit, $
-                                    label=label,caption=caption,newpage=newpage,ps_file_names=use_files,_extra=_extra)
-     lst=latex_figst2figstr(fig_st)
-  
-     FOR i=0L,n_elements(lst)-1 DO printf,unit,lst(i)
-     printf,unit,' '
-     counter=counter+1
-  end
-  
-  close,unit
-  free_lun,unit
-  message,'Wrote '+tex_file_name,/info
-
 
 ; cube1 chan maps
   
@@ -410,6 +383,7 @@ compare_figures_only:
   free_lun,unit
   message,'Wrote '+tex_file_name,/info
 
+  if keyword_set(chanmaps_only) then goto, the_end
 
 ; cube2 chan maps
   
@@ -478,6 +452,45 @@ compare_figures_only:
   free_lun,unit
   message,'Wrote '+tex_file_name,/info
 
+
+
+; emission_mask chan maps
+  
+  caption='Joint Emission Mask: Individual Channels'
+  counter=1
+  allfiles=file_basename(file_search(use_plotdir+"/joint*png"))
+  nfiles=n_elements(allfiles)
+  nfigs=ceil(nfiles/16.) ; we want 4x4 panels in each figure
+  start_idx_i=0 & end_idx_i=15
+
+  tex_file_name=use_reportdir+'emissionmask_chanmaps_fig.tex'
+  openw,unit,tex_file_name,/get_lun
+
+  for k=0,nfigs-1 do begin
+     if counter eq 2 then caption=caption+' (cont.)'
+     label='fig:jsm_chanmaps_'+strtrim(string(fix(counter)),2)
+     start_idx=start_idx_i+k*16
+     end_idx=end_idx_i+k*16
+     if end_idx ge nfiles then end_idx=nfiles-1
+     use_files=allfiles[start_idx:end_idx]
+     fig_st=make_latex_fig_structure(position=position,double_column=double_column,centering=centering, $
+                                    dimension_type=dimension_type,dimension_value=dimension_value,dimension_unit=dimension_unit, $
+                                    label=label,caption=caption,newpage=newpage,ps_file_names=use_files,_extra=_extra)
+     lst=latex_figst2figstr(fig_st)
+  
+     FOR i=0L,n_elements(lst)-1 DO printf,unit,lst(i)
+     printf,unit,' '
+     counter=counter+1
+  end
+  
+  close,unit
+  free_lun,unit
+  message,'Wrote '+tex_file_name,/info
+
+
+
+
+  
   ; powerspectra
   
   caption='Powerspectra: Individual Channels of Matched Cubes'
@@ -874,7 +887,15 @@ compare_figures_only:
 
   goto, the_end
   
-end else begin
+end
+     'INSPECT': begin
+
+;================
+; Strip special characters from filenames to stop latex throwing an error
+;================
+
+  use_c1str=repstr(cube_str.c1_file,'_','\_')
+
 ;================
 ; INSPECT LATEX
 ;================
@@ -882,14 +903,7 @@ end else begin
    IF keyword_set(figures_only) THEN goto,inspect_figures_only
   IF keyword_set(tables_only) THEN goto,inspect_tables_only
   IF keyword_set(logs_only) THEN goto,inspect_logs_only
-
-   
-;================
-; Strip special characters from filenames to stop latex throwing an error
-;================
-
-  use_c1str=repstr(cube_str.c1_file,'_','\_')
-  
+ 
     inspect_logs_only:
 ;================
 ;== Make the input .tex file containing the processing logs
@@ -916,7 +930,7 @@ end else begin
 ;== Make the input cube table
 ;================
 
-  one_st={file:'',pixscale:nan,chanw:nan,bmaj:nan,bmin:nan,bpa:nan,bunit:'',nx:0,ny:0,nv:0}
+  one_st={file:'',pixscale:nan,chanw:nan,bmaj:nan,bmin:nan,bpa:nan,bunit:'',casa:'',nx:0,ny:0,nv:0}
   st=replicate(one_st,1)
 
   st[0].file=cube_str.c1_file
@@ -929,13 +943,14 @@ end else begin
   st[0].ny=cube_str.c1_dims[1]
   st[0].nv=cube_str.c1_dims[2]
   st[0].bunit=cube_str.c1_bunit
+  st[0].bunit=cube_str.c1_casa
 
   fileout=use_reportdir+'inputcube_table.tex'
   caption='Basic parameters of input cube.'
   label='tab:input_cube'
 
-  frmt='(A40, " & ",F0.2, " & ",F0.2, " & ",F0.2, " & ",F0.2, " & ",F0.2, " & ", A10, " & ", I0, " & ",I0, " & ",I0," \\")'
-  units=['','[as]','[km/s]', '[as]','[as]','[deg]' , '', '' , '', ''] ; order is order of tags in the structure, not replace arrays
+  frmt='(A40, " & ",F0.2, " & ",F0.2, " & ",F0.2, " & ",F0.2, " & ",F0.2, " & ", A10, " & ", A20, " & ",I0, " & ",I0," & ", I0," \\")'
+  units=['','[as]','[km/s]', '[as]','[as]','[deg]' , '', '' , '', '', ''] ; order is order of tags in the structure, not replace arrays
   tiny=1 & small=0 & landscape=0 & long=1
 
   struct2latex_table,st,fileout,use_all_format=frmt, long=long, /force, $
@@ -1354,8 +1369,108 @@ inspect_figures_only:
 
   
 
-   end
+end
+     'SIMPLE' : begin
+
+
+;================
+; Strip special characters from filenames to stop latex throwing an error
+;================
+
+  use_c1str=repstr(cube_str.c1_file,'_','\_')
+
+;================
+; INSPECT LATEX
+;================
+
+;================
+;== Make the input cube table
+;================
+
+  one_st={file:'',pixscale:nan,chanw:nan,bmaj:nan,bmin:nan,bpa:nan,bunit:'',casa:'',nx:0,ny:0,nv:0}
+  st=replicate(one_st,1)
+
+  st[0].file=cube_str.c1_file
+  st[0].pixscale=cube_str.c1_pixscale
+  st[0].chanw=cube_str.c1_chanw
+  st[0].bmaj=cube_str.c1_beam[0]*3600.
+  st[0].bmin=cube_str.c1_beam[1]*3600.
+  st[0].bpa=cube_str.c1_beam[2]
+  st[0].nx=cube_str.c1_dims[0]
+  st[0].ny=cube_str.c1_dims[1]
+  st[0].nv=cube_str.c1_dims[2]
+  st[0].bunit=cube_str.c1_bunit
+  st[0].casa=cube_str.c1_casa
+
+  fileout=use_reportdir+'inputcube_table.tex'
+  caption='Basic parameters of input cube.'
+  label='tab:input_cube'
+
+  frmt='(A40, " & ",F0.2, " & ",F0.2, " & ",F0.2, " & ",F0.2, " & ",F0.2, " & ", A10, " & ", A20, " & ",I0, " & ",I0," & ", I0," \\")'
+  units=['','[as]','[km/s]', '[as]','[as]','[deg]' , '', '' , '', '', ''] ; order is order of tags in the structure, not replace arrays
+  tiny=1 & small=0 & landscape=0 & long=1
+
+  struct2latex_table,st,fileout,use_all_format=frmt, long=long, /force, $
+                     /silent,caption=caption,label=label,units=units,tiny=tiny,small=small,landscape=landscape
+
+  message,'Wrote '+fileout,/info
+
+;================
+;== Make the channel map figures (multi-panel)
+;================
+
+; settings for 'channel-map' type figures
   
+  newpage=0
+  dimension_type='width'
+  dimension_value=3.           ;cm
+  dimension_unit='cm'
+  angle=0.
+  centering=0
+
+; cube1 chan maps
+  
+  caption='Individual Channels of Final Cube'
+  counter=1
+  allfiles=file_basename(file_search(use_plotdir+"/c1_chan*png"))
+  nfiles=n_elements(allfiles)
+  nfigs=ceil(nfiles/16.) ; we want 4x4 panels in each figure
+  start_idx_i=0 & end_idx_i=15
+
+  tex_file_name=use_reportdir+'cube1_chanmaps_fig.tex'
+  openw,unit,tex_file_name,/get_lun
+
+  for k=0,nfigs-1 do begin
+     if counter eq 2 then caption=caption+' (cont.)'
+     label='fig:cube1_chanmaps_'+strtrim(string(fix(counter)),2)
+     start_idx=start_idx_i+k*16
+     end_idx=end_idx_i+k*16
+     if end_idx ge nfiles then end_idx=nfiles-1
+     use_files=allfiles[start_idx:end_idx]
+     fig_st=make_latex_fig_structure(position=position,double_column=double_column,centering=centering, $
+                                    dimension_type=dimension_type,dimension_value=dimension_value,dimension_unit=dimension_unit, $
+                                    label=label,caption=caption,newpage=newpage,ps_file_names=use_files,_extra=_extra)
+     lst=latex_figst2figstr(fig_st)
+  
+     FOR i=0L,n_elements(lst)-1 DO printf,unit,lst(i)
+     printf,unit,' '
+     counter=counter+1
+  end
+  
+  close,unit
+  free_lun,unit
+  message,'Wrote '+tex_file_name,/info
+
+
+
+end
+     else : begin
+        message,'Unknown report type requested?',/info
+        stop
+        end
+  endcase
+  
+
   the_end:
   return
   

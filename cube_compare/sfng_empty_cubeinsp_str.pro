@@ -14,6 +14,7 @@ function sfng_empty_cubeinsp_str
               c1_pixscale: nan , $
               c1_chanw: nan , $
               c1_bunit: '' , $
+              c1_casa: '' , $
               c1_beam: fltarr(3) , $
               c1_dims: fltarr(3) , $
               pixscale_as: nan , $
