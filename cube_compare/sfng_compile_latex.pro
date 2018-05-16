@@ -1,6 +1,6 @@
 PRO sfng_compile_latex,reportdir=reportdir,plotdir=plotdir $
                       ,template=template,tagname=tagname $
-                      ,help=help,verbose=verbose,inspect=inspect,simple=simple
+                      ,help=help,verbose=verbose,inspect=inspect,show=show
 
 ;+
 ; NAME
@@ -22,7 +22,7 @@ PRO sfng_compile_latex,reportdir=reportdir,plotdir=plotdir $
 ;     verbose = print extra information to screen
 ;     inspect = compile for output PDF document for sfng_cube_inspect,
 ;               (default is to compile for sfng_cube_compare)
-;     simple = compile for output PDF document for sfng_cube_show,
+;     show = compile for output PDF document for sfng_cube_show,
 ;               (default is to compile for sfng_cube_compare)
 ; OUTPUTS
 ;     PDF document
@@ -54,7 +54,7 @@ PRO sfng_compile_latex,reportdir=reportdir,plotdir=plotdir $
 ; process user inputs
 ;===================
   if keyword_set(inspect) then use_template='./sfng_cube_inspect_pdftemplate.tex'
-  if keyword_set(simple) then use_template='./sfng_cube_show_pdftemplate.tex'
+  if keyword_set(show) then use_template='./sfng_cube_show_pdftemplate.tex'
   if keyword_set(template) then use_template=template
   if keyword_set(plotdir) then use_plotdir=plotdir
   if keyword_set(reportdir) then use_reportdir=reportdir
@@ -81,7 +81,7 @@ PRO sfng_compile_latex,reportdir=reportdir,plotdir=plotdir $
   file_in=use_template
   file_out=use_reportdir+'sfng_cube_compare_'+use_tagname+use_datestr+'.tex'
   if keyword_set(inspect) then file_out=use_reportdir+'sfng_cube_inspect_'+use_tagname+use_datestr+'.tex'
-  if keyword_set(simple) then file_out=use_reportdir+'sfng_cube_show_'+use_tagname+use_datestr+'.tex'
+  if keyword_set(show) then file_out=use_reportdir+'sfng_cube_show_'+use_tagname+use_datestr+'.tex'
   str='cp '+file_in+' '+file_out
   spawn,str
 

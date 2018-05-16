@@ -4,7 +4,7 @@ PRO sfng_make_latex_elements,cube_str $
                              ,figures_only=figures_only $
                              ,tables_only=tables_only $
                              ,help=help,verbose=verbose, inspect=inspect $
-                             ,simple=simple $
+                             ,show=show $
                              ,type=type
 
 ; NAME:
@@ -55,7 +55,7 @@ PRO sfng_make_latex_elements,cube_str $
   nan=!values.f_nan
   use_reportdir='./report/'
   use_plotdir='./plots/'
-  use_type='SIMPLE'
+  use_type='SHOW'
   
 ;================
 ; Process user inputs
@@ -1370,7 +1370,7 @@ inspect_figures_only:
   
 
 end
-     'SIMPLE' : begin
+     'SHOW' : begin
 
 
 ;================
@@ -1380,8 +1380,37 @@ end
   use_c1str=repstr(cube_str.c1_file,'_','\_')
 
 ;================
-; INSPECT LATEX
+; SHOW LATEX
 ;================
+
+  ;================
+;== Make the input files table
+;================
+
+  one_st={type:'',file:''}
+  st=replicate(one_st,4)
+
+  st[0].type='DATA'
+  st[1].type='NOISE'
+  st[2].type='MASK'
+  st[3].type='RESIDUALS'
+  st[0].file=cube_str.c1_file
+  st[1].file=cube_str.n1_file
+  st[2].file=cube_str.m1_file
+  st[3].file=cube_str.r1_file
+
+  fileout=use_reportdir+'inputfiles_table.tex'
+  caption='List of Input Files'
+  label='tab:files'
+
+  frmt='(A40, " & ", A40," \\")'
+  units=['',''] ; order is order of tags in the structure, not replace arrays
+  tiny=0 & small=1 & landscape=0 & long=0
+
+  struct2latex_table,st,fileout,use_all_format=frmt, long=long, /force, $
+                     /silent,caption=caption,label=label,units=units,tiny=tiny,small=small,landscape=landscape
+
+  message,'Wrote '+fileout,/info
 
 ;================
 ;== Make the input cube table
@@ -1407,7 +1436,9 @@ end
   label='tab:input_cube'
 
   frmt='(A40, " & ",F0.2, " & ",F0.2, " & ",F0.2, " & ",F0.2, " & ",F0.2, " & ", A10, " & ", A20, " & ",I0, " & ",I0," & ", I0," \\")'
+;  frmt='(F0.2, " & ",F0.2, " & ",F0.2, " & ",F0.2, " & ",F0.2, " & ", A10, " & ", A20, " & ",I0, " & ",I0," & ", I0," \\")'
   units=['','[as]','[km/s]', '[as]','[as]','[deg]' , '', '' , '', '', ''] ; order is order of tags in the structure, not replace arrays
+;  units=[' [as]','[km/s]','[as]','[as]','[deg]' , '', '' , '', '', ''] ; order is order of tags in the structure, not replace arrays
   tiny=1 & small=0 & landscape=0 & long=1
 
   struct2latex_table,st,fileout,use_all_format=frmt, long=long, /force, $
@@ -1415,6 +1446,68 @@ end
 
   message,'Wrote '+fileout,/info
 
+
+
+;================
+;== Make the flux statistics table
+;================
+
+  one_st={galaxy:'',totflux:nan,peak:nan,totflux_inmask:nan,peak_inmask:nan,totflux_outmask:nan,peak_outmask:nan}
+  st=replicate(one_st,1)
+  label='tab:flux'
+
+  st[0].galaxy=cube_str.galaxy
+  st[0].totflux=cube_str.c1_totflux
+  st[0].peak=cube_str.c1_peak
+  st[0].totflux_inmask=cube_str.c1_totflux_signalmask
+  st[0].totflux_outmask=cube_str.c1_totflux_nosignalmask
+  st[0].peak_inmask=cube_str.c1_peak_signalmask
+  st[0].peak_outmask=cube_str.c1_peak_nosignalmask
+
+  fileout=use_reportdir+'flux_table.tex'
+  caption='Total Flux Statistics'
+
+  frmt='(A10, " & ",E0.3, " & ",F0.2, " & ",E0.3, " & ",F0.2,  " & ",E0.3, " & ",F0.2, " \\")'
+  units=['', '[K.km/s.pix]' , '[K]', '[K.km/s.pix]' ,'[K]','[K.km/s.pix]' , '[K]'] ; order is order of tags in the structure, not replace arrays
+  tiny=1 & small=0 & landscape=0 & long=1
+
+  struct2latex_table,st,fileout,use_all_format=frmt, long=long, /force, $
+                     /silent,caption=caption,label=label,units=units,tiny=tiny,small=small,landscape=landscape
+
+  message,'Wrote '+fileout,/info
+
+;; ;================
+;; ;== Make the noise statistics table
+;; ;================
+
+;;   one_st={file:'',rms_cube:nan,rms_nosignal:nan}
+;;   st=replicate(one_st,3)
+
+;;   st[0].file=cube_str.c1_file
+;;   st[1].file=cube_str.c2_file
+;;   st[2].file='Difference Cube'
+
+;;   st[0].rms_cube=cube_str.c1_noisestats.mean
+;;   st[1].rms_cube=cube_str.c2_noisestats.mean
+;;   st[2].rms_cube=cube_str.diffcube_stats.mean
+;;   st[0].rms_nosignal=cube_str.c1_noisestats_nosignal.rms
+;;   st[1].rms_nosignal=cube_str.c2_noisestats_nosignal.rms
+;;   st[2].rms_nosignal=cube_str.diffcube_stats_nosignal.mean
+  
+;;   fileout=use_reportdir+'noise_table.tex'
+;;   caption='Noise Statistics'
+;;   label='tab:noise_statistics'
+
+;;   frmt='(A40, " & ",E0.3, " & ",E0.3, " \\")'
+;;   units=['', '[K]' , '[K]'] ; order is order of tags in the structure, not replace arrays
+;;   tiny=0 & small=1 & landscape=0 & long=0
+
+;;   struct2latex_table,st,fileout,use_all_format=frmt,  long=long,/force, $
+;;                      /silent,caption=caption,label=label,units=units,tiny=tiny,small=small,landscape=landscape
+
+;;   message,'Wrote '+fileout,/info
+
+  
 ;================
 ;== Make the channel map figures (multi-panel)
 ;================
@@ -1430,7 +1523,7 @@ end
 
 ; cube1 chan maps
   
-  caption='Individual Channels of Final Cube'
+  caption='Individual channels of data cube, deconvolution mask overplotted (black contours).'
   counter=1
   allfiles=file_basename(file_search(use_plotdir+"/c1_chan*png"))
   nfiles=n_elements(allfiles)
@@ -1462,6 +1555,92 @@ end
   message,'Wrote '+tex_file_name,/info
 
 
+
+; residuals chan maps
+  
+  caption='Individual channels of residuals cube, deconvolution mask overplotted (black contours).'
+  counter=1
+  allfiles=file_basename(file_search(use_plotdir+"/r1_chan*png"))
+  nfiles=n_elements(allfiles)
+  nfigs=ceil(nfiles/16.) ; we want 4x4 panels in each figure
+  start_idx_i=0 & end_idx_i=15
+
+  tex_file_name=use_reportdir+'resids_chanmaps_fig.tex'
+  openw,unit,tex_file_name,/get_lun
+
+  for k=0,nfigs-1 do begin
+     if counter eq 2 then caption=caption+' (cont.)'
+     label='fig:resids_chanmaps_'+strtrim(string(fix(counter)),2)
+     start_idx=start_idx_i+k*16
+     end_idx=end_idx_i+k*16
+     if end_idx ge nfiles then end_idx=nfiles-1
+     use_files=allfiles[start_idx:end_idx]
+     fig_st=make_latex_fig_structure(position=position,double_column=double_column,centering=centering, $
+                                    dimension_type=dimension_type,dimension_value=dimension_value,dimension_unit=dimension_unit, $
+                                    label=label,caption=caption,newpage=newpage,ps_file_names=use_files,_extra=_extra)
+     lst=latex_figst2figstr(fig_st)
+  
+     FOR i=0L,n_elements(lst)-1 DO printf,unit,lst(i)
+     printf,unit,' '
+     counter=counter+1
+  end
+  
+  close,unit
+  free_lun,unit
+  message,'Wrote '+tex_file_name,/info
+
+
+
+;================
+;== Make the noise histogram figures
+;================
+
+; settings for 'square' figures -- noise histos, correlation plots
+  
+  newpage=0
+  dimension_type='width'
+  dimension_value=12            ;cm
+  dimension_unit='cm'
+  angle=0.
+  centering=0
+
+  
+  ; Noise histogram -- cube 1
+  file='noisehisto.png'
+  caption='Histogram of pixel values in the entire noise cube (black), inner quarter of FoV of noise cube (blue).'
+  label='fig:noisehisto'
+  tex_file_name=use_reportdir+'noisehisto_fig.tex'
+  fig_st=make_latex_fig_structure(position=position,double_column=double_column,centering=centering, $
+                                    dimension_type=dimension_type,dimension_value=dimension_value,dimension_unit=dimension_unit, $
+                                    label=label,caption=caption,newpage=newpage,ps_file_names=file,_extra=_extra)
+  lst=latex_figst2figstr(fig_st,show=show)
+  openw,unit,tex_file_name,/get_lun
+  FOR i=0L,n_elements(lst)-1 DO printf,unit,lst(i)
+  close,unit
+  free_lun,unit
+  message,'Wrote '+tex_file_name,/info
+
+    
+  ; Residuals histogram
+  file='residshisto.png'
+  caption='Histogram of pixel values in entire residuals cube (black), inner quarter of FoV of residuals cube (blue), and signal-free region of data cube (green).'
+  label='fig:residshisto'
+  tex_file_name=use_reportdir+'residshisto_fig.tex'
+  fig_st=make_latex_fig_structure(position=position,double_column=double_column,centering=centering, $
+                                    dimension_type=dimension_type,dimension_value=dimension_value,dimension_unit=dimension_unit, $
+                                    label=label,caption=caption,newpage=newpage,ps_file_names=file,_extra=_extra)
+  lst=latex_figst2figstr(fig_st,show=show)
+  openw,unit,tex_file_name,/get_lun
+  FOR i=0L,n_elements(lst)-1 DO printf,unit,lst(i)
+  close,unit
+  free_lun,unit
+  message,'Wrote '+tex_file_name,/info
+
+
+  
+;================
+;  USER ERROR: Unknown report type requested
+;================
 
 end
      else : begin

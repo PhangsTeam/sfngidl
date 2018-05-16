@@ -767,7 +767,8 @@ end
 
   window,use_win,xsize=600,ysize=600 & use_win=use_win+1
   yr=[0,1.2*(max(hhcube)/float(total(hhcube,/nan)))]
-  fitlim=0.2*(max(hhcube)/float(total(hhcube,/nan)))
+;  fitlim=0.2*(max(hhcube)/float(total(hhcube,/nan)))
+  fitlim=0.2*(percentile(hhcube,1)/float(total(hhcube,/nan)))
   tit='Pixels outside emission mask'
   
   cgplot,nzbins,(hhcube/float(total(hhcube,/nan))),/ysty,/xsty $
@@ -809,7 +810,8 @@ end
 
   window,use_win,xsize=600,ysize=600 & use_win=use_win+1
   yr=[0,1.2*(max(hhcube)/float(total(hhcube,/nan)))]
-  fitlim=0.2*(max(hhcube)/float(total(hhcube,/nan)))
+;  fitlim=0.2*(max(hhcube)/float(total(hhcube,/nan)))
+  fitlim=0.2*(percentile(hhcube,1)/float(total(hhcube,/nan)))
   tit='Pixels outside emission mask'
   
   cgplot,nzbins,(hhcube/float(total(hhcube,/nan))),/ysty,/xsty $
@@ -1466,6 +1468,8 @@ diff_chans:
   !p.position=[0.2,0.2,0.8,0.8]
   
   for k=start_chan,end_chan do begin
+
+  ; zero pad image to be a square with 2^N pixels   
      i1=reform(c1[*,*,k]) & i2=reform(c2[*,*,k])
      sz=size(i1)  & ndim=sz[0] & nax1=sz[1] & nax2=sz[2]
      nelts = nax1 > nax2
@@ -1484,20 +1488,19 @@ diff_chans:
         i1[badpix]=0.
         i2[badpix]=0.
      end
+; FT and PS of image 1
      fft1 = FFT(i1, /CENTER)
      ps1 = ABS(fft1)^2
      sps1 = ALOG10(ps1)
-;     sps1_0 = sps1 - MAX(sps1)
      mm1=mean_by_radaz(sps1,/nan,/cropcircle)
      sps1_1d=(mm1.radial_mean);+abs(min(mm1.radial_mean))+2)
-;     sps1_1d0=sps1_1d/sps1_1d[0]
+
+; FT and PS of image 2
      fft2 = FFT(i2, /CENTER)
      ps2 = ABS(fft2)^2
      sps2 = ALOG10(ps2)
-;     sps2_0 = sps2 - MAX(sps2)
      mm2=mean_by_radaz(sps2,/nan,/cropcircle)
      sps2_1d=(mm2.radial_mean);+abs(min(mm2.radial_mean))+2)
-;     sps2_1d0=sps2_1d/sps2_1d[0]
 
 
      dfpix=1./2^targpow              ; cycles per pixel
